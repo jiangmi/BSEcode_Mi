@@ -18,7 +18,7 @@ from matplotlib.pyplot import *
 import matplotlib as mpll
 
 class BSE:
-    def __init__(self,model,Tval,fileG4,fileG,draw,useG0,symmetrizeG4,phSymmetry,calcRedVertex,calcCluster,nkfine):
+    def __init__(self,model,Tval,fileG4,fileG,file_analysis_hdf5,draw,useG0,symmetrizeG4,phSymmetry,calcRedVertex,calcCluster,useGamma_hdf5,nkfine,compare_with_analysishdf5):
         self.vertex_channels = ["PARTICLE_PARTICLE_UP_DOWN",          \
                                 "PARTICLE_HOLE_CHARGE",               \
                                 "PARTICLE_HOLE_MAGNETIC",             \
@@ -29,11 +29,14 @@ class BSE:
         self.Tval = Tval
         self.fileG4 = fileG4
         self.fileG = fileG
+        self.file_analysis_hdf5 = file_analysis_hdf5
         self.draw = draw
         self.useG0 = useG0
         self.calcCluster = calcCluster
         self.calcRedVertex = calcRedVertex
         self.phSymmetry = phSymmetry
+        self.useGamma_hdf5 = useGamma_hdf5
+        self.compareHDF5 = compare_with_analysishdf5
         
         self.readData()
         self.setupMomentumTables()
@@ -180,7 +183,7 @@ class BSE:
         s = np.array(f['functions']['Self_Energy']['data'])
         print "sigma.shape=", s.shape
         self.sigmaoriginal = s[:,:,0,:,0,:,0] + 1j *s[:,:,0,:,0,:,1]
-        print "Im sigma=",s[127:138,1,0,0,0,0,1]
+        #print "Im sigma=",s[127:138,1,0,0,0,0,1]
         
         # Now load frequency data
         self.wn = np.array(f['domains']['frequency-domain']['elements'])
@@ -235,7 +238,8 @@ class BSE:
                                             for l4 in range(self.nOrb):
                                                 iw1Green = iw1 - self.iwG40 + self.iwG0
                                                 iw2Green = iw2 - self.iwG40 + self.iwG0
-                                                self.G4[iw1,ik1,iw2,ik2,l1,l2,l3,l4] -= 2.0 * self.Green[iw1Green,ik1,l1,l2] * self.Green[iw2Green,ik2,l4,l3]
+                                                self.G4[iw1,ik1,iw2,ik2,l1,l2,l3,l4] -= 2.0 * self.Green[iw1Green,ik1,l1,l2] \
+                                                                                            * self.Green[iw2Green,ik2,l4,l3] 
 
     def readin_model(self,model,f):
         if model=='square':
@@ -322,9 +326,9 @@ class BSE:
             import symmetrize_Nc16A; sym=symmetrize_Nc16A.symmetrize()
             print("symmetrizing 16A cluster")
             sym.apply_point_group_symmetries_Q0(self.G4)
-        elif (self.cluster[0,0] == 4 and self.cluster[0,1] == 0 and self.cluster[1,0] == 0 and self.cluster[1,1] == 4):
-            import symmetrize_Nc16B; sym=symmetrize_Nc16B.symmetrize()
-            print("symmetrizing 16B cluster")
+       # elif (self.cluster[0,0] == 4 and self.cluster[0,1] == 0 and self.cluster[1,0] == 0 and self.cluster[1,1] == 4):
+       #     import symmetrize_Nc4x4; sym=symmetrize_Nc4x4.symmetrize()
+       #     print("symmetrizing 16B cluster")
             sym.apply_point_group_symmetries_Q0(self.G4)
         elif (self.cluster[0,0] == 2 and self.cluster[0,1] == 2 and self.cluster[1,0] == -4 and self.cluster[1,1] == 2):
             import symmetrize_Nc12; sym=symmetrize_Nc12.symmetrize()
@@ -447,13 +451,29 @@ class BSE:
                                     ikPlusQ = int(self.iKSum[ik,self.iQ]) # k+Q
                                     iwPlusiwm = int(min(max(iw1 + self.iwm,0),NwG-1))  # iwn+iwm
                                     #print("iw1,ik,iwPlusiwm,ikPlusQ",iw1,ik,iwPlusiwm,ikPlusQ)
-                                    c1 = - self.Green[iw1,ik,l1,l3] * self.Green[iwPlusiwm,ikPlusQ,l4,l2]
+                                    c1 = self.Green[iw1,ik,l1,l3] * self.Green[iwPlusiwm,ikPlusQ,l4,l2]
                                     self.chic0[iw,ik,l1,l2,iw,ik,l3,l4] = c1
                                     if (l1==l2) & (l3==l4):
                                         G4susQz0 += c1
                                         G4susQzPi += c1*exp(1j*np.pi*(l2-l3))
 
         self.chic0M = self.chic0.reshape(self.nt,self.nt)
+        
+        # compare with data obtained by analysis code
+        if self.compareHDF5:
+            data = h5py.File(self.file_analysis_hdf5,'r')
+
+            datafile = data["analysis-functions"]["G_II_0_function"]["data"]
+            print 'analysis-functions/G_II_0_function', datafile.shape
+            Nw = datafile.shape[0]
+            Nk = datafile.shape[1]
+            for iK in range(0,Nk):
+                for iw in range(0,Nw):
+                    difference = datafile[iw,iK,0,0,0,0,0] - real(self.chic0[iw,ik,0,0,iw,ik,0,0])
+                    if abs(difference)>1.e-2:
+                        print 'chi0c diffrence !'
+                        print iK, iw, datafile[iw,iK,0,0,0,0,0], real(self.chic0[iw,ik,0,0,iw,ik,0,0])
+
  
         if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":
             print "Cluster Chi0(q,qz=0) :", G4susQz0/(self.invT*self.Nc*2.0)
@@ -464,6 +484,9 @@ class BSE:
         On Page 7 of PRB 64, 195130(2001): "We see that again it is the irreducible quantity, i.e., the vertex
         function, for which cluster and lattice correspond."
         '''
+        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
+        self.Gamma = zeros((NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb),dtype='complex')
+        
         print "Now calculating the irr. Gamma on cluster, which is used as approximation of that on lattice"
         
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb
@@ -483,15 +506,53 @@ class BSE:
         #self.GammaM *= float(Nc)*self.invT*float(self.nOrb)
         self.GammaM *= float(Nc)*self.invT
         self.Gamma = self.GammaM.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
-        
-        print("Gamma=",self.Gamma[16:32,1,0,0,16,1,0,0])
-        
+                    
         Gamma1 = self.Gamma.copy()
         for iw2 in range(NwG4):
             self.Gamma[:,:,:,:,iw2,:,:,:]=(Gamma1[:,:,:,:,iw2,:,:,:]+Gamma1[:,:,:,:,NwG4-iw2-1,:,:,:])/2
         Gamma1 = self.Gamma.copy()
         for iw1 in range(NwG4):
             self.Gamma[iw1,:,:,:,:,:,:,:]=(Gamma1[iw1,:,:,:,:,:,:,:]+Gamma1[NwG4-iw1-1,:,:,:,:,:,:,:])/2
+            
+        # compare with data obtained by analysis code
+        '''
+        if self.compareHDF5:
+            data = h5py.File(self.file_analysis_hdf5,'r')
+
+            datafile = data["analysis-functions"]["Gamma_lattice"]["data"]
+            print "analysis-functions/Gamma_lattice", datafile.shape
+            Nw = datafile.shape[0]
+            Nk = datafile.shape[1]
+            for iK1 in range(0,Nk):
+                for iK2 in range(0,Nk):
+                    for iw1 in range(0,Nw):
+                        for iw2 in range(0,Nw):
+                            diffrence = datafile[iw1,iK1,0,0,iw2,iK2,0,0,0] - real(self.Gamma[iw1,iK1,0,0,iw2,iK2,0,0])
+                            if diffrence>1.e-2:
+                                print 'Gamma_lattice diffrence !'
+                                print iw1,iK1,iw2,iK2, datafile[iw1,iK1,0,0,iw2,iK2,0,0,0],\
+                                                       real(self.Gamma[iw1,iK1,0,0,iw2,iK2,0,0])
+        '''
+        
+        if self.useGamma_hdf5:
+            data = h5py.File(self.file_analysis_hdf5,'r')
+            dataRe = array(data["analysis-functions"]["Gamma_lattice"]["data"])[:,:,:,:,:,:,:,:,0]
+            dataIm = array(data["analysis-functions"]["Gamma_lattice"]["data"])[:,:,:,:,:,:,:,:,1]
+            print "analysis-functions/Gamma_lattice", dataRe.shape
+            Ga = dataRe+1j*dataIm
+            
+            for l1 in range(nOrb):
+                for l2 in range(nOrb):
+                    for l3 in range(nOrb):
+                        for l4 in range(nOrb):
+                            for iK1 in range(0,Nc):
+                                for iK2 in range(0,Nc):
+                                    for iw1 in range(0,NwG4):
+                                        for iw2 in range(0,NwG4):
+                                            self.Gamma[iw1,iK1,l1,l2,iw2,iK2,l3,l4] = Ga[iw1,iK1,l1,l2,iw2,iK2,l3,l4] 
+                                            
+            self.GammaM = self.Gamma.reshape(self.nt,self.nt)
+            
             
     def calcGamma_d(self):
         '''
@@ -641,7 +702,7 @@ class BSE:
 
                         G1inv = (1j*wn+self.mu)*np.identity(nOrb)-ek-self.sigma[iwG,iK,:,:]
                         G2inv = (1j*wn+self.mu)*np.identity(nOrb)-ekpq-self.sigmanegk[iwPlusiwm,iKQ,:,:]
-                        G1 = linalg.inv(G1inv); G2 = -linalg.inv(G2inv)
+                        G1 = linalg.inv(G1inv); G2 = linalg.inv(G2inv)
 
                     for l1 in range(nOrb):
                         for l2 in range(nOrb):
@@ -686,6 +747,22 @@ class BSE:
         self.chi0M = self.chi0.reshape(self.nt,self.nt)
         self.gkdNorm /= kPatch.shape[0]
 
+        # compare with data obtained by analysis code
+        if self.compareHDF5:
+            data = h5py.File(self.file_analysis_hdf5,'r')
+
+            datafile = data["analysis-functions"]["chi_0_lattice"]["data"]
+            print "analysis-functions/chi_0_lattice", datafile.shape
+            Nw = datafile.shape[0]
+            Nk = datafile.shape[1]
+            for iK in range(0,Nk):
+                for iw in range(0,Nw):
+                    difference = datafile[iw,iK,0,0,0,0,0] - real(self.chi0[iw,iK,0,0,iw,iK,0,0])/(self.invT*float(self.Nc))
+                    if abs(difference)>1.e-3:
+                        print 'chi_0_lattice difference !'
+                        print iK, iw, datafile[iw,iK,0,0,0,0,0],\
+                                      real(self.chi0[iw,iK,0,0,iw,iK,0,0])/(self.invT*float(self.Nc))
+
 
         #if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":
         if self.vertex_channel in ("PARTICLE_HOLE_MAGNETIC","PARTICLE_HOLE_CHARGE"):
@@ -711,6 +788,7 @@ class BSE:
             self.chiM = self.chi0M
             
         self.pm = np.dot(self.GammaM, self.chiM)
+            
         #self.pm *= 1.0/(self.invT*float(self.Nc)*float(self.nOrb))
         self.pm *= 1.0/(self.invT*float(self.Nc))
         
@@ -760,6 +838,19 @@ class BSE:
         self.lambdas2 = w2[ilead2]
         self.evecs2 = v2[:,ilead2]
         self.evecs2 = self.evecs2.reshape(NwG4,Nc,nOrb,nOrb,nt)
+        
+        # compare with data obtained by analysis code
+        if self.compareHDF5:
+            data = h5py.File(self.file_analysis_hdf5,'r')
+
+            datafile = data["analysis-functions"]["leading-eigenvalues"]["data"]
+            print "analysis-functions/leading-eigenvalues", datafile.shape
+            for ii in range(0,10):
+                difference = datafile[ii,0] - real(self.lambdas[ii])
+                if abs(difference)>1.e-2:
+                    print 'Leading eigenvalue difference !'
+                    print ii, datafile[ii,0], real(self.lambdas[ii])
+                            
         
         print "Leading 16 eigenvalues of lattice Bethe-salpeter equation"
         for i in range(16):
@@ -1490,12 +1581,38 @@ class BSE:
                                         
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04]
+Ts = [0.1]
+channels = ['phcharge']#,'phmag']
+channels = ['phmag']
+qs = ['00']#,'pi20','pi0','pipi2','pipi','pi2pi2']
+qs = ['pipi']
+
 for T_ind, T in enumerate(Ts):
-    file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
-    file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
-    
-    if(os.path.exists(file_tp)):
-        print "\n =================================\n"
-        print "T =", T
-        # model='square','bilayer','Emery'
-        BSE('square',Ts[T_ind],file_tp,file_sp,draw=False,useG0=False,symmetrizeG4=True,phSymmetry=True,calcRedVertex=True,calcCluster=False,nkfine=100)
+    for ch in channels:
+        for q in qs:
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
+            file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            #file_tp = './Nc4/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
+            file_analysis_hdf5 = './sc/T='+str(Ts[T_ind])+'/analysis.hdf5'
+            #file_analysis_hdf5 = './Nc4/T='+str(Ts[T_ind])+'/analysis.hdf5'
+
+            if(os.path.exists(file_tp)):
+                print "\n =================================\n"
+                print "T =", T
+                # model='square','bilayer','Emery'
+                BSE('square',\
+                    Ts[T_ind],\
+                    file_tp,\
+                    file_sp,\
+                    file_analysis_hdf5,\
+                    draw=False,\
+                    useG0=False,\
+                    symmetrizeG4=True,\
+                    phSymmetry=True,\
+                    calcRedVertex=True,\
+                    calcCluster=False,\
+                    useGamma_hdf5=True,\
+                    nkfine=100,\
+                    compare_with_analysishdf5=True)
+                
