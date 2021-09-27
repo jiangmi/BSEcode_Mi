@@ -82,14 +82,14 @@ class BSE:
     def readData(self):
         f = h5py.File(self.fileG4,'r')
         self.cluster = array(f["domains"]["CLUSTER"]["REAL_SPACE"]["super-basis"]["data"])
-        print("Cluster vectors:",self.cluster)
+        print("Cluster vectors:",self.cluster,'\n')
             
         # self.iwm = array(f['parameters']['vertex-channel']['w-channel'])[0] # transferred frequency in units of 2*pi*temp
         self.iwm = array(f['parameters']['four-point']['frequency-transfer'])[0] # transferred frequency in units of 2*pi*temp
-        print "Transferred frequency iwm = ",self.iwm
+        print "Transferred frequency iwm = ",self.iwm,'\n'
         # self.qchannel = array(f['parameters']['vertex-channel']['q-channel'])
         self.qchannel = array(f['parameters']['four-point']['momentum-transfer'])
-        print "Transferred momentum q = ",self.qchannel
+        print "Transferred momentum q = ",self.qchannel,'\n'
         # a = array(f['parameters']['vertex-channel']['vertex-measurement-type'])[:]
         #a = array(f['parameters']['four-point']['channels']['data'])[0]
         #self.vertex_channel = ''.join(chr(i) for i in a)
@@ -101,7 +101,7 @@ class BSE:
 
         #print "Vertex channel = ",self.vertex_channel
         self.invT = array(f['parameters']['physics']['beta'])[0]
-        print "Inverse temperature = ",self.invT
+        print "Inverse temperature = ",self.invT,'\n'
         self.temp = 1.0/self.invT
         assert(abs(self.temp-self.Tval)<1.e-4)
         
@@ -109,26 +109,26 @@ class BSE:
         self.readin_model(self.model,f)
         
         self.fill = array(f['parameters']['physics']['density'])[0]
-        print "desired filling = ",self.fill
+        print "desired filling = ",self.fill,'\n'
         self.dens = array(f['DCA-loop-functions']['density']['data'])
-        print "actual filling:",self.dens
+        print "actual filling:",self.dens,'\n'
         self.nk = array(f['DCA-loop-functions']['n_k']['data'])
         self.sign = array(f['DCA-loop-functions']['sign']['data'])
-        print "sign:",self.sign
+        print "sign:",self.sign,'\n'
         self.orbital=array(f['DCA-loop-functions']['orbital-occupancies']['data'])
-        print "orbital.shape:",self.orbital.shape
+        print "orbital.shape:",self.orbital.shape,'\n'
         # ('orbital.shape:', (1, 2, 3))
         
         if self.model=='square':
-            print "orbital occupancy:",self.orbital[0]
-            print "filling =", self.orbital[0,0,0]+self.orbital[0,1,0]
+            print "orbital occupancy:",self.orbital[0],'\n'
+            print "filling =", self.orbital[0,0,0]+self.orbital[0,1,0],'\n'
         elif self.model=='bilayer':
-            print "orbital occupancy:",self.orbital[self.orbital.shape[0]-1]
-            print "Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0]
-            print "Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1]
+            print "orbital occupancy:",self.orbital[self.orbital.shape[0]-1],'\n'
+            print "Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n'
+            print "Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n'
         
         self.sigmaarray=array(f['DCA-loop-functions']['L2_Sigma_difference']['data'])
-        print "L2_Sigma_difference =", self.sigmaarray
+        print "L2_Sigma_difference =", self.sigmaarray,'\n'
         # Now read the 4-point Green's function
         # G4Re  = array(f['functions']['G4_k_k_w_w']['data'])[:,:,:,:,:,:,:,:,0]
         # G4Im  = array(f['functions']['G4_k_k_w_w']['data'])[:,:,:,:,:,:,:,:,1]
@@ -136,19 +136,19 @@ class BSE:
         for ver in self.vertex_channels:
             if 'G4_'+ver in f['functions'].keys():
                 self.vertex_channel = ver
-                print "Vertex channel = ",self.vertex_channel
+                print "Vertex channel = ",self.vertex_channel,'\n'
                 GG = array(f['functions']['G4_'+self.vertex_channel]['data'])
-                print "original G4.shape=", GG.shape
+                print "original G4.shape=", GG.shape,'\n'
         
         G4Re  = array(f['functions']['G4_'+self.vertex_channel]['data'])[0,0,:,:,:,:,:,:,:,:,0]
         G4Im  = array(f['functions']['G4_'+self.vertex_channel]['data'])[0,0,:,:,:,:,:,:,:,:,1]
         #G4Re  = array(f['functions']['G4']['data'])[0,0,:,:,:,:,:,:,:,:,0]
         #G4Im  = array(f['functions']['G4']['data'])[0,0,:,:,:,:,:,:,:,:,1]
         self.G4 = G4Re+1j*G4Im
-        print "Extracted G4.shape=", self.G4.shape 
+        print "Extracted G4.shape=", self.G4.shape ,'\n'
         
         GG = array(f['functions']['cluster_greens_function_G_k_w']['data'])
-        print "original G.shape=", GG.shape
+        print "original G.shape=", GG.shape,'\n'
         
         # Now read the cluster Green's function, only need spin up component
         GRe = array(f['functions']['cluster_greens_function_G_k_w']['data'])[:,:,0,:,0,:,0]
@@ -156,7 +156,7 @@ class BSE:
         #GRe = array(f['functions']['free_cluster_greens_function_G0_k_w']['data'])[:,:,0,:,0,:,0]
         #GIm = array(f['functions']['free_cluster_greens_function_G0_k_w']['data'])[:,:,0,:,0,:,1]
         self.Green = GRe + 1j * GIm
-        print "Extracted G.shape=", self.Green.shape
+        print "Extracted G.shape=", self.Green.shape,'\n'
         #print("self.Green =",self.Green[512:1024,0,0,0])
         
         GRe = array(f['functions']['cluster_greens_function_G_k_t']['data'])[:,:,0,:,0,:,0]
@@ -181,18 +181,18 @@ class BSE:
 
         # Now read the self-energy
         s = np.array(f['functions']['Self_Energy']['data'])
-        print "sigma.shape=", s.shape
+        print "sigma.shape=", s.shape,'\n'
         self.sigmaoriginal = s[:,:,0,:,0,:,0] + 1j *s[:,:,0,:,0,:,1]
         #print "Im sigma=",s[127:138,1,0,0,0,0,1]
         
         # Now load frequency data
         self.wn = np.array(f['domains']['frequency-domain']['elements'])
         self.wnSet = np.array(f['domains']['vertex-frequency-domain (COMPACT)']['elements'])
-        print 'G4\'s iwn = ', self.wnSet
+        print 'G4\'s iwn = ', self.wnSet,'\n'
 
         # Now read the K-vectors
         self.Kvecs = array(f['domains']['CLUSTER']['MOMENTUM_SPACE']['elements']['data'])
-        print "K-vectors: ",self.Kvecs
+        print "K-vectors: ",self.Kvecs,'\n'
 
         # Now read other Hubbard parameters
         self.mu = np.array(f['DCA-loop-functions']['chemical-potential']['data'])[0]
@@ -211,7 +211,7 @@ class BSE:
         #print ("G4shape0 = ", self.G4.shape[0], ", G4shape1 = ", self.G4.shape[1], ", G4shape2 = ", self.G4.shape[2], ", G4shape3 = ", self.G4.shape[3], ", G4shape4 = ", self.G4.shape[4], ", G4shape5 = ", self.G4.shape[5], ", G4shape6 = ", self.G4.shape[6], ", G4shape7 = ", self.G4.shape[7])
         self.NwTP = 2*np.array(f['parameters']['domains']['imaginary-frequency']['four-point-fermionic-frequencies'])[0]
         self.iQ = self.K_2_iK(self.qchannel[0],self.qchannel[1])
-        print "Index of transferred momentum: ", self.iQ
+        print "Index of transferred momentum: ", self.iQ,'\n'
         #self.ddwave = array(f['CT-AUX-SOLVER-functions']['dwave-pp-correlator']['data'])
         #print('shape0 of ddwave=',self.ddwave.shape[0])
         #print('shape1 of ddwave=',self.ddwave.shape[1])
@@ -310,7 +310,7 @@ class BSE:
         print "No Kvec found!!!"
  
     def symmetrize_G4(self):
-        print "symmetrize G4"
+        print "symmetrize G4",'\n'
         if self.iwm==0:
             print "Imposing symmetry in wn"
             self.apply_symmetry_in_wn(self.G4)
@@ -344,7 +344,7 @@ class BSE:
             sym.apply_point_group_symmetries_Q0(self.G4)
     
     def reorder_G4(self):
-        print "reorder G4"
+        print "reorder G4",'\n'
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
         self.G4r=np.zeros((NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb),dtype='complex')
         G4susQz0 = 0.0
@@ -407,7 +407,7 @@ class BSE:
         
     ########################################################################
     def calcChi0Cluster(self):
-        print "Now calculating chi0 on cluster chic0 = Gc*Gc, chi^0_c of Eq.(22) in PRB 64, 195130(2001)"
+        print "Now calculating chi0 on cluster chic0 = Gc*Gc, chi^0_c of Eq.(22) in PRB 64, 195130(2001)",'\n'
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb; NtG=self.NtG; c2=0.0
         self.chic0 = zeros((NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb),dtype='complex')
         
@@ -460,11 +460,12 @@ class BSE:
         self.chic0M = self.chic0.reshape(self.nt,self.nt)
         
         # compare with data obtained by analysis code
-        if self.compareHDF5:
+        # if using Gamma from hdf5, it does not matter chi0_cluster's difference
+        if self.compareHDF5 and self.useGamma_hdf5==False:
             data = h5py.File(self.file_analysis_hdf5,'r')
 
             datafile = data["analysis-functions"]["G_II_0_function"]["data"]
-            print 'analysis-functions/G_II_0_function', datafile.shape
+            print 'analysis-functions/G_II_0_function', datafile.shape,'\n'
             Nw = datafile.shape[0]
             Nk = datafile.shape[1]
             for iK in range(0,Nk):
@@ -487,7 +488,7 @@ class BSE:
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
         self.Gamma = zeros((NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb),dtype='complex')
         
-        print "Now calculating the irr. Gamma on cluster, which is used as approximation of that on lattice"
+        print "Now calculating the irr. Gamma on cluster, which is used as approximation of that on lattice",'\n'
         
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb
         
@@ -516,7 +517,7 @@ class BSE:
             
         # compare with data obtained by analysis code
         '''
-        if self.compareHDF5:
+        if self.compareHDF5 and self.useGamma_hdf5==False:
             data = h5py.File(self.file_analysis_hdf5,'r')
 
             datafile = data["analysis-functions"]["Gamma_lattice"]["data"]
@@ -528,17 +529,17 @@ class BSE:
                     for iw1 in range(0,Nw):
                         for iw2 in range(0,Nw):
                             diffrence = datafile[iw1,iK1,0,0,iw2,iK2,0,0,0] - real(self.Gamma[iw1,iK1,0,0,iw2,iK2,0,0])
-                            if diffrence>1.e-2:
+                            if diffrence>1.e-1:
                                 print 'Gamma_lattice diffrence !'
                                 print iw1,iK1,iw2,iK2, datafile[iw1,iK1,0,0,iw2,iK2,0,0,0],\
                                                        real(self.Gamma[iw1,iK1,0,0,iw2,iK2,0,0])
-        '''
-        
+        '''        
         if self.useGamma_hdf5:
+            print "Use Gamma from HDF5 generated in analysis run instead of computing it via inv(chi_0_cluster) - inv(G4) !!!",'\n'
             data = h5py.File(self.file_analysis_hdf5,'r')
             dataRe = array(data["analysis-functions"]["Gamma_lattice"]["data"])[:,:,:,:,:,:,:,:,0]
             dataIm = array(data["analysis-functions"]["Gamma_lattice"]["data"])[:,:,:,:,:,:,:,:,1]
-            print "analysis-functions/Gamma_lattice", dataRe.shape
+            print "analysis-functions/Gamma_lattice", dataRe.shape,'\n'
             Ga = dataRe+1j*dataIm
             
             for l1 in range(nOrb):
@@ -558,7 +559,7 @@ class BSE:
         '''
         See MJ's paper on extended Hubbard model in 2018 PRB
         '''                            
-        print "Now calculating frequency dependence of the d-wave-projected pairing interaction"
+        print "Now calculating frequency dependence of the d-wave-projected pairing interaction",'\n'
         
         Nc=self.Nc; NwG4=self.NwG4; nt = self.nt; nOrb = self.nOrb
         
@@ -588,7 +589,7 @@ class BSE:
           
     ########################################################################
     def buildChi0Lattice(self,nkfine):
-        print "Now calculating coarsed-grained chi0, Eq.(18) in PRB 64, 195130(2001)"
+        print "Now calculating coarsed-grained chi0, Eq.(18) in PRB 64, 195130(2001)",'\n'
 
         NwG=self.NwG
         # Cluster K-grid
@@ -752,7 +753,7 @@ class BSE:
             data = h5py.File(self.file_analysis_hdf5,'r')
 
             datafile = data["analysis-functions"]["chi_0_lattice"]["data"]
-            print "analysis-functions/chi_0_lattice", datafile.shape
+            print "analysis-functions/chi_0_lattice", datafile.shape,'\n'
             Nw = datafile.shape[0]
             Nk = datafile.shape[1]
             for iK in range(0,Nk):
@@ -777,7 +778,7 @@ class BSE:
             print "Lattice Chi0(q,qz=pi):", chi0Pi/(self.invT*self.Nc*2.0)
             
     def buildKernelMatrix(self):
-        print "Build kernel matrix GammaIrrCluster(=GammaIrrLattice) * coarse_grained chi0"
+        print "Build kernel matrix GammaIrrCluster(=GammaIrrLattice) * coarse_grained chi0",'\n'
             
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb
         # Build kernel matrix Gamma*chi0
@@ -844,7 +845,7 @@ class BSE:
             data = h5py.File(self.file_analysis_hdf5,'r')
 
             datafile = data["analysis-functions"]["leading-eigenvalues"]["data"]
-            print "analysis-functions/leading-eigenvalues", datafile.shape
+            print "analysis-functions/leading-eigenvalues", datafile.shape,'\n'
             for ii in range(0,10):
                 difference = datafile[ii,0] - real(self.lambdas[ii])
                 if abs(difference)>1.e-2:
@@ -852,13 +853,13 @@ class BSE:
                     print ii, datafile[ii,0], real(self.lambdas[ii])
                             
         
-        print "Leading 16 eigenvalues of lattice Bethe-salpeter equation"
+        print "Leading 16 eigenvalues of lattice Bethe-salpeter equation",'\n'
         for i in range(16):
             if abs(imag(self.lambdas[i]))<1.e06:
                 print real(self.lambdas[i])
         
         # only concerned about Cu-Cu eigenvalue by setting orb index to be 0
-        print "Analyze eigenval and eigvec:"
+        print "Analyze eigenval and eigvec:",'\n'
         iw0=int(NwG4/2)
         for io in range(nOrb):
             print '================='
@@ -1186,7 +1187,7 @@ class BSE:
         # chi0D2 and chi0D is Eq.(27-28) in PRB 64, 195130(2001)
         '''
         print "=============================================================================="
-        print "Calculate lattice d-wave susceptibility with Eq.(22-30) in PRB 64,195130(2001)"
+        print "Calculate lattice d-wave susceptibility with Eq.(22-30) in PRB 64,195130(2001)",'\n'
         gkd = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1])
         nOrb = self.nOrb;Nc=self.Nc;NwG4=self.NwG4;
         csum = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
@@ -1240,7 +1241,7 @@ class BSE:
         self.Pxs = real(csumxs)
         self.Pdgkc = real(ccsum)
         #csum3 = sum(real(self.chi0D2[abs(self.wnSet) <= 2.*4*self.t**2/self.U,:]))/(self.Nc*self.invT)
-        print "Calculations from GammaRed:"
+        print "Calculations from GammaRed:",'\n'
                                                     
         print '================='
         for io in range(nOrb):
@@ -1581,7 +1582,7 @@ class BSE:
                                         
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04]
-Ts = [0.1]
+#Ts = [0.1]
 channels = ['phcharge']#,'phmag']
 channels = ['phmag']
 qs = ['00']#,'pi20','pi0','pipi2','pipi','pi2pi2']
@@ -1591,10 +1592,11 @@ for T_ind, T in enumerate(Ts):
     for ch in channels:
         for q in qs:
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
-            file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            #file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             #file_tp = './Nc4/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
-            file_analysis_hdf5 = './sc/T='+str(Ts[T_ind])+'/analysis.hdf5'
+            file_analysis_hdf5 = './T='+str(Ts[T_ind])+'/analysis.hdf5'
             #file_analysis_hdf5 = './Nc4/T='+str(Ts[T_ind])+'/analysis.hdf5'
 
             if(os.path.exists(file_tp)):
@@ -1612,7 +1614,7 @@ for T_ind, T in enumerate(Ts):
                     phSymmetry=True,\
                     calcRedVertex=True,\
                     calcCluster=False,\
-                    useGamma_hdf5=True,\
+                    useGamma_hdf5=False,\
                     nkfine=100,\
                     compare_with_analysishdf5=True)
                 
