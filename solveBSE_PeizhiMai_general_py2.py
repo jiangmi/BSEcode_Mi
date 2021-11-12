@@ -7,6 +7,13 @@
 # https://github.com/cosdis/DCA
 # which lags behind the current master version, but G4 of threeband model is correct
 
+# Code check:
+# Nov.12, 2021:
+# Pass check with Maier's PRL 2006 for single band Hubbard model (Nc=24)
+# for pp-SC, ph-magnetic, ph-charge channels
+# All d-wave eigenvalue, mag and charge eigenvalues, cluster and lattice susceptibilities
+# are consistent with Maier's BSE code solveBSE_fromG4_200618.py for single band case
+
 import numpy as np
 import math
 from numpy import *
@@ -451,7 +458,7 @@ class BSE:
                                     ikPlusQ = int(self.iKSum[ik,self.iQ]) # k+Q
                                     iwPlusiwm = int(min(max(iw1 + self.iwm,0),NwG-1))  # iwn+iwm
                                     #print("iw1,ik,iwPlusiwm,ikPlusQ",iw1,ik,iwPlusiwm,ikPlusQ)
-                                    c1 = self.Green[iw1,ik,l1,l3] * self.Green[iwPlusiwm,ikPlusQ,l4,l2]
+                                    c1 = -self.Green[iw1,ik,l1,l3] * self.Green[iwPlusiwm,ikPlusQ,l4,l2]
                                     self.chic0[iw,ik,l1,l2,iw,ik,l3,l4] = c1
                                     if (l1==l2) & (l3==l4):
                                         G4susQz0 += c1
@@ -507,13 +514,13 @@ class BSE:
         #self.GammaM *= float(Nc)*self.invT*float(self.nOrb)
         self.GammaM *= float(Nc)*self.invT
         self.Gamma = self.GammaM.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
-                    
-        Gamma1 = self.Gamma.copy()
-        for iw2 in range(NwG4):
-            self.Gamma[:,:,:,:,iw2,:,:,:]=(Gamma1[:,:,:,:,iw2,:,:,:]+Gamma1[:,:,:,:,NwG4-iw2-1,:,:,:])/2
-        Gamma1 = self.Gamma.copy()
-        for iw1 in range(NwG4):
-            self.Gamma[iw1,:,:,:,:,:,:,:]=(Gamma1[iw1,:,:,:,:,:,:,:]+Gamma1[NwG4-iw1-1,:,:,:,:,:,:,:])/2
+        
+        #Gamma1 = self.Gamma.copy()
+        #for iw2 in range(NwG4):
+        #    self.Gamma[:,:,:,:,iw2,:,:,:]=(Gamma1[:,:,:,:,iw2,:,:,:]+Gamma1[:,:,:,:,NwG4-iw2-1,:,:,:])/2
+        #Gamma1 = self.Gamma.copy()
+        #for iw1 in range(NwG4):
+        #    self.Gamma[iw1,:,:,:,:,:,:,:]=(Gamma1[iw1,:,:,:,:,:,:,:]+Gamma1[NwG4-iw1-1,:,:,:,:,:,:,:])/2
             
         # compare with data obtained by analysis code
         '''
@@ -703,7 +710,7 @@ class BSE:
 
                         G1inv = (1j*wn+self.mu)*np.identity(nOrb)-ek-self.sigma[iwG,iK,:,:]
                         G2inv = (1j*wn+self.mu)*np.identity(nOrb)-ekpq-self.sigmanegk[iwPlusiwm,iKQ,:,:]
-                        G1 = linalg.inv(G1inv); G2 = linalg.inv(G2inv)
+                        G1 = linalg.inv(G1inv); G2 = -linalg.inv(G2inv)
 
                     for l1 in range(nOrb):
                         for l2 in range(nOrb):
@@ -857,6 +864,8 @@ class BSE:
         for i in range(16):
             if abs(imag(self.lambdas[i]))<1.e06:
                 print real(self.lambdas[i])
+                
+        print "Leading 16 eigenvalues of lattice Bethe-salpeter equation",self.lambdas[0:16]
         
         # only concerned about Cu-Cu eigenvalue by setting orb index to be 0
         print "Analyze eigenval and eigvec:",'\n'
@@ -866,7 +875,7 @@ class BSE:
             print 'orb ',io
             for inr in range(16):
                 imax = argmax(self.evecs[iw0,:,io,io,inr])
-                if (abs(self.evecs[iw0-1,imax,io,io,inr]-self.evecs[iw0,imax,io,io,inr]) <= 1.0e-2):
+                if (abs(self.evecs[iw0-1,imax,io,io,inr]-self.evecs[iw0,imax,io,io,inr]) <= 1.0e-1):
                     print "Eigenval is ", real(self.lambdas[inr]), "even frequency"
                 else:
                     print "Eigenval is ", real(self.lambdas[inr]), "odd frequency"
@@ -1271,11 +1280,8 @@ class BSE:
         NwG4=self.NwG4; Nc=self.Nc; nOrb=self.nOrb
         csum = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
 
-        # DCA code probably assign different sign and coefficient on Gamma
-        if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":
-            G2L = linalg.inv( linalg.inv(self.chi0M) + self.GammaM/(float(Nc)*self.invT) )
-        elif self.vertex_channel=="PARTICLE_HOLE_CHARGE":
-            G2L = linalg.inv( linalg.inv(self.chi0M) - self.GammaM )
+        G2L = linalg.inv( linalg.inv(self.chi0M) - self.GammaM/(float(Nc)*self.invT) )
+        G2L /= (float(self.Nc)*self.invT)
         G2 = G2L.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
         
         for l1 in range(nOrb):
@@ -1616,5 +1622,5 @@ for T_ind, T in enumerate(Ts):
                     calcCluster=False,\
                     useGamma_hdf5=False,\
                     nkfine=100,\
-                    compare_with_analysishdf5=True)
+                    compare_with_analysishdf5=False)
                 
