@@ -927,6 +927,9 @@ class BSE:
                         break
                 if self.found_d: 
                     print "sx-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
+                    
+        else:
+            print "leading eigenvalue", self.Tval, ' ', real(self.lambdas[0])
                 
     def calcKernelEigenValuesnew(self):
         nt = self.nt; Nc = self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
