@@ -764,8 +764,10 @@ class BSE:
               
         for io in range(nOrb):
             fname = 'chi0_lattice_vs_iwn_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
-            self.write_data_2cols(fname, self.wnSet[NwG4/2:NwG4],\
-                                  chi0print[NwG4/2:NwG4,self.iKPi0,io,io,io,io])
+            self.write_data_4cols(fname, self.wnSet[NwG4/2:NwG4],\
+                                  chi0print[NwG4/2:NwG4,0,         io,io,io,io],\
+                                  chi0print[NwG4/2:NwG4,self.iKPi0,io,io,io,io],\
+                                  chi0print[NwG4/2:NwG4,self.iKPiPi,io,io,io,io])
                 
         self.chi0M = self.chi0.reshape(self.nt,self.nt)
         self.gkdNorm /= kPatch.shape[0]
@@ -1493,6 +1495,11 @@ class BSE:
         f = open(fname,'w',1) 
         for i in range(len(xs)):
             f.write('{:.6e}\t{:.6e}\t{:.6e}\n'.format(float(xs[i]),float(ys[i]),float(zs[i])))
+            
+    def write_data_4cols(self, fname, xs, ys, zs, ws):
+        f = open(fname,'w',1) 
+        for i in range(len(xs)):
+            f.write('{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\n'.format(float(xs[i]),float(ys[i]),float(zs[i]),float(ws[i])))
             
 ######### Plotting functions
 
