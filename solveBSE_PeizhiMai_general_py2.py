@@ -659,7 +659,7 @@ class BSE:
                     self.sigmanegk[:,:,l2,l4] = self.sigma[:,:,l2,l4]
 
         # Now coarse-grain G*G to build chi0(K) = Nc/N sum_k Gc(K+k')Gc(-K-k')
-        nOrb = self.nOrb; nw = wnSet.shape[0]; nk=Kset.shape[0]
+        nOrb = self.nOrb; nw = wnSet.shape[0]; nk=Kset.shape[0]; 
         self.chi0  = np.zeros((nw,nk,nOrb,nOrb,nw,nk,nOrb,nOrb),dtype='complex')
         self.chi0D  = np.zeros((nw,nk,nOrb,nOrb,nw,nk,nOrb,nOrb),dtype='complex')
         self.chi0D2  = np.zeros((nw,nk,nOrb,nOrb,nw,nk,nOrb,nOrb),dtype='complex')
@@ -751,7 +751,22 @@ class BSE:
         #            iK2Trans = sym.symmTrans_of_iK(iK2,iSym)
         #            self.chi0[:,iK1Trans,0,0,:,iK2Trans,0,0] = tmp/8.
         
-        
+        # write chi0_lattice at K=(pi,0):
+        NwG4=self.NwG4
+        chi0print  = np.zeros((nw,nk,nOrb,nOrb,nOrb,nOrb),dtype='complex')
+        for l1 in range(nOrb):
+            for l2 in range(nOrb):
+                for l3 in range(nOrb):
+                    for l4 in range(nOrb):
+                        for iw in range(nw):
+                            for iK in range(nk):
+                                chi0print[iw,iK,l1,l2,l3,l4] = self.chi0[iw,iK,l1,l2,iw,iK,l3,l4]
+              
+        for io in range(nOrb):
+            fname = 'chi0_lattice_vs_iwn_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
+            self.write_data_2cols(fname, self.wnSet[NwG4/2:NwG4],\
+                                  chi0print[NwG4/2:NwG4,self.iKPi0,io,io,io,io])
+                
         self.chi0M = self.chi0.reshape(self.nt,self.nt)
         self.gkdNorm /= kPatch.shape[0]
 
