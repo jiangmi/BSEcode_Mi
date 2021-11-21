@@ -11,6 +11,13 @@ class BSE:
 
 
     def __init__(self,fileG4,fileG="data.DCA_sp.hdf5",draw=False,useG0=False,symmetrize_G4=False,phSymmetry=False,calcRedVertex=False,calcCluster=False,nkfine=100):
+        self.vertex_channels = ["PARTICLE_PARTICLE_UP_DOWN",          \
+                                "PARTICLE_HOLE_CHARGE",               \
+                                "PARTICLE_HOLE_MAGNETIC",             \
+                                "PARTICLE_HOLE_LONGITUDINAL_UP_UP",   \
+                                "PARTICLE_HOLE_LONGITUDINAL_UP_DOWN", \
+                                "PARTICLE_HOLE_TRANSVERSE"]
+        
         self.fileG4 = fileG4
         self.fileG = fileG
         self.draw = draw
@@ -94,26 +101,38 @@ class BSE:
         # self.qchannel = array(f['parameters']['vertex-channel']['q-channel'])
         self.qchannel = array(f['parameters']['four-point']['momentum-transfer'])
         print("Transferred momentum q = ",self.qchannel)
-        # a = array(f['parameters']['vertex-channel']['vertex-measurement-type'])[:]
-        a = array(f['parameters']['four-point']['type'])[:]
-        self.vertex_channel = ''.join(chr(i) for i in a)
-        print("Vertex channel = ",self.vertex_channel)
+        
+        for ver in self.vertex_channels:
+            if 'G4_'+ver in f['functions'].keys():
+                self.vertex_channel = ver
+                print "Vertex channel = ",self.vertex_channel,'\n'
+                    
         self.invT = array(f['parameters']['physics']['beta'])[0]
         print("Inverse temperature = ",self.invT)
         self.temp = 1.0/self.invT
-        self.U = array(f['parameters']['twoorbital-Hubbard-model']['U'])[0]
-        print("U = ",self.U)
 
-        self.t00    = array(f['parameters']['twoorbital-Hubbard-model']['t00'])[0]
-        self.tp00   = array(f['parameters']['twoorbital-Hubbard-model']['tp00'])[0]
-        self.tpp00  = array(f['parameters']['twoorbital-Hubbard-model']['tpp00'])[0]
-        self.t11    = array(f['parameters']['twoorbital-Hubbard-model']['t11'])[0]
-        self.tp11   = array(f['parameters']['twoorbital-Hubbard-model']['tp11'])[0]
-        self.tpp11  = array(f['parameters']['twoorbital-Hubbard-model']['tpp11'])[0]
-        self.t01    = array(f['parameters']['twoorbital-Hubbard-model']['t01'])[0]
-        self.tp01   = array(f['parameters']['twoorbital-Hubbard-model']['tp01'])[0]
-        self.tpp01  = array(f['parameters']['twoorbital-Hubbard-model']['tpp01'])[0]
-        self.DeltaE = array(f['parameters']['twoorbital-Hubbard-model']['DeltaE'])[0]
+        self.e1 = array(f['parameters']['bilayer-Hubbard-model']['e1'])[0]
+        print"e1 = ",self.e1
+        self.e2 = array(f['parameters']['bilayer-Hubbard-model']['e2'])[0]
+        print"e2 = ",self.e2
+        self.U1 = array(f['parameters']['bilayer-Hubbard-model']['U1'])[0]
+        print"U1 = ",self.U1
+        self.U2 = array(f['parameters']['bilayer-Hubbard-model']['U2'])[0]
+        print"U2 = ",self.U2
+        self.t1 = array(f['parameters']['bilayer-Hubbard-model']['t1'])[0]
+        print"t1 = ",self.t1
+        self.t2 = array(f['parameters']['bilayer-Hubbard-model']['t2'])[0]
+        print"t2 = ",self.t2
+        self.t1p = array(f['parameters']['bilayer-Hubbard-model']['t1-prime'])[0]
+        print"t1-prime = ",self.t1p
+        self.t2p = array(f['parameters']['bilayer-Hubbard-model']['t2-prime'])[0]
+        print"t2-prime = ",self.t2p
+        self.tperp = array(f['parameters']['bilayer-Hubbard-model']['t-perp'])[0]
+        print"tperp = ",self.tperp
+        self.V = array(f['parameters']['bilayer-Hubbard-model']['V'])[0]
+        print"V = ",self.V
+        self.Vp = array(f['parameters']['bilayer-Hubbard-model']['V-prime'])[0]
+        print"V-prime = ",self.Vp
 
         self.fill = array(f['parameters']['physics']['density'])[0]
         print("filling = ",self.fill)
@@ -122,15 +141,17 @@ class BSE:
         self.nk = array(f['DCA-loop-functions']['n_k']['data'])
 
         # Now read the 4-point Green's function
-        G4Re  = array(f['functions']['G4']['data'])[0,:,:,0,:,:,:,:,:,:,0]
-        G4Im  = array(f['functions']['G4']['data'])[0,:,:,0,:,:,:,:,:,:,1]
+        G4Re  = array(f['functions']['G4_'+self.vertex_channel]['data'])[0,0,:,:,:,:,:,:,:,:,0]
+        G4Im  = array(f['functions']['G4_'+self.vertex_channel]['data'])[0,0,:,:,:,:,:,:,:,:,1]
         self.G4 = G4Re+1j*G4Im
         # G4[iw1,iw2,ik1,ik2,l1,l2,l3,l4]
+        print "Extracted G4.shape=", self.G4.shape ,'\n'
 
         # Now read the cluster Green's function
         GRe = array(f['functions']['cluster_greens_function_G_k_w']['data'])[:,:,0,:,0,:,0]
         GIm = array(f['functions']['cluster_greens_function_G_k_w']['data'])[:,:,0,:,0,:,1]
         self.Green = GRe + 1j * GIm
+        print "Extracted G.shape=", self.Green.shape,'\n'
 
         self.Nc  = self.Green.shape[1]
         self.NwG = self.Green.shape[0]
@@ -230,13 +251,13 @@ class BSE:
                                  for l3 in range(self.nOrb):
                                      for l4 in range(self.nOrb):
                                         if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":
-                                            c1= self.G4[iw1,iw2,ik1,ik2,l1,l2,l3,l4]
+                                            c1= self.G4[iw1,ik1,iw2,ik2,l1,l2,l3,l4]
                                             self.G4r[iw1,ik1,l1,l3,iw2,ik2,l4,l2]  = c1
                                             if (l1==l3) & (l4==l2):
                                                 G4susQz0 += c1
                                                 G4susQzPi += c1*exp(1j*np.pi*(l2-l3))
                                         elif self.vertex_channel=="PARTICLE_PARTICLE_UP_DOWN":
-                                            c1 = self.G4[iw2,iw1,ik2,ik1,l4,l3,l2,l1]
+                                            c1 = self.G4[iw2,ik2,iw1,ik1,l4,l3,l2,l1]
                                             self.G4r[iw1,ik1,l1,l2,iw2,ik2,l3,l4] = c1
                                             if (l1!=l2) & (l3!=l4):
                                                 G4susQz0 += c1
@@ -279,10 +300,10 @@ class BSE:
                 self.G4r = G4New / 8.
 
             # symmetrize in wn,wn' assuming that G4 is symmetric under k --> -k, k' --> -k'
-            for iw1 in range(nwn):
-                for iw2 in range(nwn):
-                    imw1 = nwn-1-iw1
-                    imw2 = nwn-1-iw2
+            for iw1 in range(NwG4):
+                for iw2 in range(NwG4):
+                    imw1 = NwG4-1-iw1
+                    imw2 = NwG4-1-iw2
                     tmp1 = self.G4r[iw1,:,:,:,iw2,:,:,:]
                     tmp2 = self.G4r[imw1,:,:,:,imw2,:,:,:]
                     self.G4r[iw1,:,:,:,iw2,:,:,:]   = 0.5*(tmp1+conj(tmp2))
@@ -301,29 +322,27 @@ class BSE:
             print("Cluster inter-orbital Chi(q=0):", G4susQz0/(self.invT*self.Nc*4.0))
 
     def symmetrize_single_particle_function(self,G):
-            if (self.cluster[0,0] == 4 and self.cluster[0,1] == 0 and self.cluster[1,0] == 0 and self.cluster[1,1] == 4):  # 4x4 cluster
-                import symmetrize_Nc4x4
-                sym=symmetrize_Nc4x4.symmetrize()
-                print("symmetrizing 16B (4x4) cluster")
+        if (self.cluster[0,0] == 4 and self.cluster[0,1] == 0 and self.cluster[1,0] == 0 and self.cluster[1,1] == 4):  # 4x4 cluster
+            import symmetrize_Nc4x4
+            sym=symmetrize_Nc4x4.symmetrize()
+            print("symmetrizing 16B (4x4) cluster")
 
-                nwn = G.shape[0] # G[w,k,l1,l2]
-                GNew = zeros_like(G)
+            nwn = G.shape[0] # G[w,k,l1,l2]
+            GNew = zeros_like(G)
 
-                for iK in range(self.Nc):
-                    for l1 in range(self.nOrb):
-                        for l2 in range(self.nOrb):
+            for iK in range(self.Nc):
+                for l1 in range(self.nOrb):
+                    for l2 in range(self.nOrb):
 
-                            for iSym in range(0,8):
-                                iKTrans = sym.symmTrans_of_iK(iK,iSym)
-                                sgn = 1.0 - 2.0 * mod(l1+l2,2) * sym.iex[iSym]
+                        for iSym in range(0,8):
+                            iKTrans = sym.symmTrans_of_iK(iK,iSym)
+                            sgn = 1.0 - 2.0 * mod(l1+l2,2) * sym.iex[iSym]
 
-                                GNew[:,iK,l1,l2] += sgn * G[:,iKTrans,l1,l2]
+                            GNew[:,iK,l1,l2] += sgn * G[:,iKTrans,l1,l2]
 
-                G = GNew / 8.
-                return G
-
-
-
+            G = GNew / 8.
+        return G
+        
 
     def fermi(self,energy):
         beta=self.invT
@@ -393,8 +412,8 @@ class BSE:
 
     def calcChi0Cluster(self):
         print ("Now calculating chi0 on cluster")
-        self.chic0  = zeros((self.NwG4,self.Nc,self.nOrb,self.nOrb,self.NwG4,self.Nc,self.nOrb,self.nOrb),dtype='complex')
-        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
+        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb=self.nOrb
+        self.chic0 = zeros((NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb),dtype='complex')
 
         if (self.vertex_channel == "PARTICLE_PARTICLE_UP_DOWN"):
             for iw in range(0,NwG4):
@@ -406,8 +425,10 @@ class BSE:
                                     iw1  = int(iw - NwG4/2 + NwG/2)
                                     ikPlusQ = int(self.iKSum[self.iKDiff[0,ik],self.iQ]) # -k+Q
                                     minusiwPlusiwm = int(min(max(NwG-iw1-1 + self.iwm,0),NwG-1)) # -iwn + iwm
-                                    c1 = self.Green[iw1,ik,l1,l3] * self.Green[minusiwPlusiwm,ikPlusQ,l2,l4]
-                                    # c1 = self.Green[iw1,ik,l2,l4] * self.Green[minusiwPlusiwm,ikPlusQ,l1,l3]
+                                    c1 = self.Green[iw1,ik,l1,l3] \
+                                       * self.Green[minusiwPlusiwm,ikPlusQ,l2,l4]
+                                    # c1 = self.Green[iw1,ik,l2,l4] \
+                                    #     * self.Green[minusiwPlusiwm,ikPlusQ,l1,l3]
                                     self.chic0[iw,ik,l1,l2,iw,ik,l3,l4] = c1
         else:
             G4susQz0 = 0.0
@@ -605,8 +626,8 @@ class BSE:
                 for k in kPatch:
                     kx = K[0]+k[0]; ky = K[1]+k[1]
                     ek = self.dispersion(kx,ky)
-                    G0inv = (1j*wn+self.mu-self.U*(self.dens[-1]/4.-0.5))* np.identity(nOrb) - ek
-                    G0 = linalg.inv(G0inv)
+                    #G0inv = (1j*wn+self.mu-self.U*(self.dens[-1]/4.-0.5))* np.identity(nOrb) - ek
+                    #G0 = linalg.inv(G0inv)
                     Qx = self.qchannel[0]; Qy = self.qchannel[1]
                     if (self.vertex_channel == "PARTICLE_PARTICLE_UP_DOWN"):
                         emkpq = self.dispersion(-kx+Qx, -ky+Qy)
@@ -629,7 +650,7 @@ class BSE:
                     for l1 in range(nOrb):
                         for l2 in range(nOrb):
                             cG[l1,l2] += G1[l1,l2]
-                            cG0[l1,l2] += G0[l1,l2]
+                            #cG0[l1,l2] += G0[l1,l2]
                             for l3 in range(nOrb):
                                 for l4 in range(nOrb):
                                     c1[l1,l2,l3,l4] += G1[l1,l3]*G2[l2,l4]
@@ -637,7 +658,7 @@ class BSE:
 
                 self.chi0[iwn,iK,:,:,iwn,iK,:,:]  = c1[:,:,:,:]/kPatch.shape[0]
                 self.cG[iwn,iK,:,:] = cG[:,:]/kPatch.shape[0]
-                self.cG0[iwn,iK,:,:] = cG0[:,:]/kPatch.shape[0]
+                #self.cG0[iwn,iK,:,:] = cG0[:,:]/kPatch.shape[0]
         self.chi0M = self.chi0.reshape(self.nt,self.nt)
 
         if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":
@@ -816,18 +837,15 @@ class BSE:
 
 
     def dispersion(self,kx,ky):
-        val00 = 2.*self.t00*(cos(kx)+cos(ky))+4.*self.tp00*cos(kx)*cos(ky)+2.*self.tpp00*(cos(2.*kx)+cos(2.*ky));
-        
-        val11 = self.DeltaE + 2.*self.t11*(cos(kx)+cos(ky))+4.*self.tp11*cos(kx)*cos(ky)+2.*self.tpp11*(cos(2.*kx)+cos(2.*ky));
-        
-        val01 = 2.*self.t01*(cos(kx)-cos(ky))+2.*self.tpp01*(cos(2.*kx)-cos(2.*ky));
+        ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
+        r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) - 4.0*self.t1p*cos(kx)*cos(ky)
+        r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) - 4.0*self.t2p*cos(kx)*cos(ky)
+        r12  = -self.tperp
 
-        ek = zeros((self.nOrb,self.nOrb),dtype=float)
-        ek[0,0] = val00
-        ek[1,1] = val11 
-        ek[1,0] = val01
-        ek[0,1] = val01
-
+        ek[0,0] = r11
+        ek[1,1] = r22
+        ek[0,1] = r12
+        ek[1,0] = r12
         return ek
 
 
@@ -944,4 +962,36 @@ class BSE:
                         tmp2 = G4[iw1,iw2,iK1q,iK2q]
                         G4[iw1,iw2,iK1,iK2]   = 0.5*(tmp1+tmp2)
                         G4[iw1,iw2,iK1q,iK2q] = 0.5*(tmp1+tmp2)
+
+###################################################################################
+Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04]
+#Ts = [0.1]
+channels = ['phcharge']#,'phmag']
+channels = ['phmag']
+qs = ['00']#,'pi20','pi0','pipi2','pipi','pi2pi2']
+qs = ['pipi']
+
+for T_ind, T in enumerate(Ts):
+    for ch in channels:
+        for q in qs:
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            #file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            #file_tp = './Nc4/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
+            file_analysis_hdf5 = './T='+str(Ts[T_ind])+'/analysis.hdf5'
+            #file_analysis_hdf5 = './Nc4/T='+str(Ts[T_ind])+'/analysis.hdf5'
+
+            if(os.path.exists(file_tp)):
+                print "\n =================================\n"
+                print "T =", T
+                # model='square','bilayer','Emery'
+                BSE(file_tp,\
+                    draw=False,\
+                    useG0=False,\
+                    symmetrize_G4=True,\
+                    phSymmetry=True,\
+                    calcRedVertex=True,\
+                    calcCluster=False,\
+                    nkfine=100)
 

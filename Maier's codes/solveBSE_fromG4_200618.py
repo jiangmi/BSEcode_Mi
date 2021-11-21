@@ -5,8 +5,6 @@ import h5py
 import sys
 import os
 from matplotlib.pyplot import *
-from plotnine import *
-import pandas as p
 # import myggplottheme
 
 
@@ -15,6 +13,13 @@ class BSE:
 
 
     def __init__(self,fileG4,draw=False,useG0=False,symmetrize_G4=False,phSymmetry=False,calcRedVertex=False,calcCluster=False,nkfine=100,oldFormat=False,shiftedK=False,newMaster=False,allq=False,iq=0,evenFreqOnly=True,wCutOff=1):
+        self.vertex_channels = ["PARTICLE_PARTICLE_UP_DOWN",          \
+                                "PARTICLE_HOLE_CHARGE",               \
+                                "PARTICLE_HOLE_MAGNETIC",             \
+                                "PARTICLE_HOLE_LONGITUDINAL_UP_UP",   \
+                                "PARTICLE_HOLE_LONGITUDINAL_UP_DOWN", \
+                                "PARTICLE_HOLE_TRANSVERSE"]
+
         self.fileG4 = fileG4
         self.draw = draw
         self.useG0 = useG0
@@ -52,7 +57,7 @@ class BSE:
         self.buildKernelMatrix()
         self.calcKernelEigenValues()
         title = "Leading eigensolutions of BSE for U="+str(self.U)+", t'="+str(self.tp)+r", $\langle n\rangle$="+str(round(self.fill,4))+", T="+str(round(self.temp,4))
-        if self.vertex_channel in ("PARTICLE_HOLE_TRANSVERSE","PARTICLE_HOLE_MAGNETIC"):
+        if self.vertex_channel in ("PARTICLE_HOLE_TRANSVERSE","PARTICLE_HOLE_MAGNETIC","PARTICLE_HOLE_CHARGE"):
             self.calcSWaveSus()
             # print("Cluster spin susceptibility: ",sum(self.G4)/(float(self.Nc)*self.invT))
         if self.draw: self.plotLeadingSolutions(self.Kvecs,self.lambdas,self.evecs[:,:,:],title)
@@ -94,7 +99,7 @@ class BSE:
             if self.found_d: self.calcPdFromEigenFull(self.ind_d)
 
         self.calcReducibleClusterVertex()
-        if self.calcRedVertex & (self.calcCluster==False):
+        if self.calcRedVertex & (self.calcCluster==False) & 1==2:
             # FSpoints = array([16,12,9,5,2,29,25,20,23,27,30,6,11,15])
             iwG40 = int(self.NwG4/2); nFs = int(FSpoints.shape[0])
             GRFS = np.sum(self.GammaRed[iwG40-1:iwG40+1,:,iwG40-1:iwG40+1,:],axis=(0,2))[FSpoints,:][:,FSpoints]/4.
@@ -179,8 +184,12 @@ class BSE:
 
             self.iwm = array(f['parameters']['four-point']['frequency-transfer'])[0] # transferred frequency in units of 2*pi*temp
             self.qchannel = array(f['parameters']['four-point']['momentum-transfer'])
-            a = array(f['parameters']['four-point']['type'])[:]
-            self.vertex_channel = ''.join(chr(i) for i in a)
+
+            for ver in self.vertex_channels:
+                if 'G4_'+ver in f['functions'].keys():
+                    self.vertex_channel = ver
+                    print "Vertex channel = ",self.vertex_channel,'\n'
+
             self.invT = array(f['parameters']['physics']['beta'])[0]
             self.temp = 1.0/self.invT
             self.U = array(f['parameters']['single-band-Hubbard-model']['U'])[0]
@@ -189,9 +198,12 @@ class BSE:
             self.dens = array(f['DCA-loop-functions']['density']['data'])
             self.nk = array(f['DCA-loop-functions']['n_k']['data'])
             if self.newMaster == False:
-                G4Re  = array(f['functions']['G4_k_k_w_w']['data'])[:,:,:,:,0,0,0,0,0]
-                G4Im  = array(f['functions']['G4_k_k_w_w']['data'])[:,:,:,:,0,0,0,0,1]
+                G4Re  = array(f['functions']['G4_'+self.vertex_channel]['data'])[0,0,:,:,:,:,0,0,0,0,0]
+                G4Im  = array(f['functions']['G4_'+self.vertex_channel]['data'])[0,0,:,:,:,:,0,0,0,0,1]
                 self.G4 = G4Re+1j*G4Im
+                print("G4 shape:",G4Re.shape)
+                # Now reorder G4
+                self.G4=self.G4.swapaxes(1,2) # Now it G4's shape is w1,w2,K1,K2
             else:
                 if self.allq == False:
                     # olf format: order of indices: w1,w2,K1,K2
@@ -374,6 +386,7 @@ class BSE:
         self.GammaM = chic0M - G4M
         self.GammaM *= float(Nc)*self.invT
         self.Gamma = self.GammaM.reshape(NwG4,Nc,NwG4,Nc)
+        
         if (self.evenFreqOnly==True) & (self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN","PARTICLE_PARTICLE_SINGLET")):
             print("Solutions restricted to even frequency!!!")
             self.Gamma = 0.5*(self.Gamma+self.Gamma[:,:,::-1,:])
@@ -1087,3 +1100,34 @@ class BSE:
                         G4[iw1,iw2,iK1,iK2]   = 0.5*(tmp1+tmp2)
                         G4[iw1,iw2,iK1q,iK2q] = 0.5*(tmp1+tmp2)
 
+###################################################################################
+Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04]
+#Ts = [0.1]
+channels = ['phcharge']#,'phmag']
+channels = ['phmag']
+qs = ['00']#,'pi20','pi0','pipi2','pipi','pi2pi2']
+qs = ['pipi']
+
+for T_ind, T in enumerate(Ts):
+    for ch in channels:
+        for q in qs:
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            #file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            #file_tp = './Nc4/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
+            file_analysis_hdf5 = './T='+str(Ts[T_ind])+'/analysis.hdf5'
+            #file_analysis_hdf5 = './Nc4/T='+str(Ts[T_ind])+'/analysis.hdf5'
+
+            if(os.path.exists(file_tp)):
+                print "\n =================================\n"
+                print "T =", T
+                # model='square','bilayer','Emery'
+                BSE(file_tp,\
+                    draw=False,\
+                    useG0=False,\
+                    symmetrize_G4=True,\
+                    phSymmetry=True,\
+                    calcRedVertex=True,\
+                    calcCluster=False,\
+                    nkfine=100)
