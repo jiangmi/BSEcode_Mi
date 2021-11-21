@@ -906,7 +906,6 @@ class BSE:
             for io in range(nOrb):
                 print '================='
                 print 'For d-wave'
-                print 'orb ',io
                 self.found_d=False
                 self.ind_d=0
                 for ia in range(nt):
@@ -918,7 +917,7 @@ class BSE:
                         self.found_d = True
                         break
                 if self.found_d: 
-                    print "d-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
+                    print "orb ",io," d-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
 
                     # write data:
                     fname = 'Eigenvec_dwave_vs_iwn_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
@@ -931,7 +930,6 @@ class BSE:
             for io in range(nOrb):
                 print '================='
                 print 'For sx-wave'
-                print 'orb ',io
                 gk = cos(self.Kvecs[:,0]) + cos(self.Kvecs[:,1]) # sxwave form factor
                 self.found_d =False
                 self.ind_d   =0
@@ -943,7 +941,7 @@ class BSE:
                         self.found_d=True
                         break
                 if self.found_d: 
-                    print "sx-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
+                    print "orb ",io," sx-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
                     
         else:
             print "leading eigenvalue", self.Tval, ' ', real(self.lambdas[0])
@@ -1275,16 +1273,15 @@ class BSE:
         print '================='
         for io in range(nOrb):
             print '================='
-            print 'orb ',io
-            print "d-wave  SC susceptibility: ",self.Tval, ' ',real(csum[io,io,io,io])
-            print "xs-wave SC susceptibility: ",self.Tval, ' ',real(csumxs[io,io,io,io])
+            print "orb ",io," d-wave  SC susceptibility: ",self.Tval, ' ',real(csum[io,io,io,io])
+            print "orb ",io," xs-wave SC susceptibility: ",self.Tval, ' ',real(csumxs[io,io,io,io])
             print ""
-            print "bare d-wave SC susceptibility:  ",self.Tval, ' ',real(csum1[io,io,io,io])
-            print "bare xs-wave SC susceptibility: ",self.Tval, ' ',real(csum1xs[io,io,io,io])
+            print "orb ",io," bare d-wave SC susceptibility:  ",self.Tval, ' ',real(csum1[io,io,io,io])
+            print "orb ",io," bare xs-wave SC susceptibility: ",self.Tval, ' ',real(csum1xs[io,io,io,io])
             #print ("bare d-wave SC susceptibility with cutoff wc = J: ",csum3)
-            print "bare d-wave SC lattice (with cluster form-factors) susceptibility: ", \
+            print "orb ",io," bare d-wave SC lattice (with cluster form-factors) susceptibility: ", \
                     self.Tval, ' ',real(ccsum1[io,io,io,io])
-            print "d-wave SC lattice (with cluster form-factors) susceptibility: ", \
+            print "orb ",io," d-wave SC lattice (with cluster form-factors) susceptibility: ", \
                     self.Tval, ' ',real(ccsum[io,io,io,io])
         print ""
 
@@ -1309,7 +1306,7 @@ class BSE:
                 for l3 in range(nOrb):
                     for l4 in range(nOrb):
                         csum[l1,l2,l3,l4] = sum(G2[:,:,l1,l2,:,:,l3,l4]) #/= (self.Nc*self.invT)#**2
-                        print "lattice susceptibility = ",self.Tval, ' ',real(csum[l1,l2,l3,l4])
+                        print "orb ",io," lattice susceptibility = ",self.Tval, ' ',real(csum[l1,l2,l3,l4])
 
     def determine_specialK(self):
         self.iKPiPi = 0
