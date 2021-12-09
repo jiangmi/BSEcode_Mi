@@ -25,7 +25,7 @@ from matplotlib.pyplot import *
 import matplotlib as mpll
 
 class BSE:
-    def __init__(self,model,Tval,fileG4,fileG,file_analysis_hdf5,draw,useG0,symmetrizeG4,phSymmetry,calcRedVertex,calcCluster,useGamma_hdf5,nkfine,compare_with_analysishdf5):
+    def __init__(self,model,Tval,fileG4,fileG,file_analysis_hdf5,draw,useG0,symmetrizeG4,phSymmetry,calcRedVertex,calcCluster,useGamma_hdf5,nkfine,compare_with_analysishdf5,write_data_file):
         self.vertex_channels = ["PARTICLE_PARTICLE_UP_DOWN",          \
                                 "PARTICLE_HOLE_CHARGE",               \
                                 "PARTICLE_HOLE_MAGNETIC",             \
@@ -44,6 +44,7 @@ class BSE:
         self.phSymmetry = phSymmetry
         self.useGamma_hdf5 = useGamma_hdf5
         self.compareHDF5 = compare_with_analysishdf5
+        self.write_data_file = write_data_file
         
         self.readData()
         self.setupMomentumTables()
@@ -69,7 +70,9 @@ class BSE:
         self.calcGamma_d()
         if calcCluster == False: self.buildChi0Lattice(nkfine)
         self.buildKernelMatrix()
-        self.calcKernelEigenValues()            
+        self.buildSymmetricKernelMatrix()
+        self.calcKernelEigenValues()      
+        self.AnalyzeEigvec()
         if self.draw: self.plotLeadingSolutions(self.Kvecs,self.lambdas,self.evecs[:,:,0,0,:],"Cu-Cu")
             
         '''
@@ -582,17 +585,18 @@ class BSE:
             for iw1 in range(NwG4/2):
                 for iK1 in range(Nc):
                     for iK2 in range(Nc):
-                        Gd[iw1,io] += gkd[iK1] * Gamma[iw1+NwG4/2,iK1,io,io,NwG4/2,iK2,io,io] * gkd[iK2]
+                        Gd[iw1,io] += gkd[iK1] * real(Gamma[iw1+NwG4/2,iK1,io,io,NwG4/2,iK2,io,io]) * gkd[iK2]
         Gd /= norm
         
         # write data:
-        if self.model=='square':
-            fname = 'Gamma_vs_iwm_T'+str(self.Tval)+'.txt'
-            self.write_data_2cols(fname, self.wnSet[NwG4/2:NwG4]-self.wnSet[NwG4/2], Gd[:,0])
-        elif self.model=='bilayer':
-            for io in range(nOrb):
-                fname = 'Gamma_vs_iwm_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
-                self.write_data_2cols(fname, self.wnSet[NwG4/2:NwG4]-self.wnSet[NwG4/2], Gd[:,io])
+        if self.write_data_file:
+            if self.model=='square':
+                fname = 'Gamma_vs_iwm_T'+str(self.Tval)+'.txt'
+                self.write_data_2cols(fname, self.wnSet[NwG4/2:NwG4]-self.wnSet[NwG4/2], Gd[:,0])
+            elif self.model=='bilayer':
+                for io in range(nOrb):
+                    fname = 'Gamma_vs_iwm_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
+                    self.write_data_2cols(fname, self.wnSet[NwG4/2:NwG4]-self.wnSet[NwG4/2], Gd[:,io])
           
     ########################################################################
     def buildChi0Lattice(self,nkfine):
@@ -762,12 +766,13 @@ class BSE:
                             for iK in range(nk):
                                 chi0print[iw,iK,l1,l2,l3,l4] = self.chi0[iw,iK,l1,l2,iw,iK,l3,l4]
               
-        for io in range(nOrb):
-            fname = 'chi0_lattice_vs_iwn_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
-            self.write_data_4cols(fname, self.wnSet[NwG4/2:NwG4],\
-                                  chi0print[NwG4/2:NwG4,0,         io,io,io,io],\
-                                  chi0print[NwG4/2:NwG4,self.iKPi0,io,io,io,io],\
-                                  chi0print[NwG4/2:NwG4,self.iKPiPi,io,io,io,io])
+        if self.write_data_file:
+            for io in range(nOrb):
+                fname = 'chi0_lattice_vs_iwn_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
+                self.write_data_4cols(fname, self.wnSet[NwG4/2:NwG4],\
+                                      chi0print[NwG4/2:NwG4,0,         io,io,io,io],\
+                                      chi0print[NwG4/2:NwG4,self.iKPi0,io,io,io,io],\
+                                      chi0print[NwG4/2:NwG4,self.iKPiPi,io,io,io,io])
                 
         self.chi0M = self.chi0.reshape(self.nt,self.nt)
         self.gkdNorm /= kPatch.shape[0]
@@ -817,53 +822,81 @@ class BSE:
         #self.pm *= 1.0/(self.invT*float(self.Nc)*float(self.nOrb))
         self.pm *= 1.0/(self.invT*float(self.Nc))
         
-        # see PRB 103, 144514 (2021) Eq.(8)
-        wtemp,vtemp = linalg.eig(self.chiM)
-        wttemp = abs(wtemp-1)
-        ileadtemp = argsort(wttemp)
-        self.lambdastemp = wtemp[ileadtemp]
-        self.evecstemp = vtemp[:,ileadtemp]
-        
-        self.Lambdatemp = sqrt(np.diag(self.lambdastemp))
-        self.chiMasqrt = np.dot(self.evecstemp,np.dot(self.Lambdatemp,linalg.inv(self.evecstemp)))
+        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
+                                   "PARTICLE_PARTICLE_UP_DOWN",\
+                                   "PARTICLE_PARTICLE_SINGLET"):
+            # 1. one way to symmetrize the pairing kernel (note that abs might be wrong, but otherwise NaN error)
+            self.pm2 = np.dot(sqrt(abs(real(self.chiM))),np.dot(real(self.GammaM), sqrt(abs(real(self.chiM)))))
+            self.pm2 *= 1.0/(self.invT*float(self.Nc))
+            
+            # 2. another way to symmetrize the pairing kernel
+            # see PRB 103, 144514 (2021) Eq.(8)
+            wtemp,vtemp = linalg.eig(self.chiM)
+            wttemp = abs(wtemp-1)
+            ileadtemp = argsort(wttemp)
+            self.lambdastemp = wtemp[ileadtemp]
+            self.evecstemp = vtemp[:,ileadtemp]
 
-        self.pm2 =  np.dot(self.chiMasqrt,np.dot(self.GammaM, self.chiMasqrt))
-        self.pm2 *= 1.0/(self.invT*float(self.Nc))
-        
-        #self.pm2m = self.pm2.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
-                
-        #pm2m1 = self.pm2m.copy()
-        #for iw2 in range(NwG4):
-        #    self.pm2m[:,:,:,:,iw2,:,:,:]=(pm2m1[:,:,:,:,iw2,:,:,:]+pm2m1[:,:,:,:,NwG4-iw2-1,:,:,:])/2
-        #pm2m1 = self.pm2m.copy()
-        #for iw1 in range(NwG4):
-        #    self.pm2m[iw1,:,:,:,:,:,:,:]=(pm2m1[iw1,:,:,:,:,:,:,:]+pm2m1[NwG4-iw1-1,:,:,:,:,:,:,:])/2
-        
-        #self.Gamma = self.GammaM.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
-        
-        #Gamma1 = self.Gamma.copy()
-        #for iw2 in range(NwG4):
-        #    self.Gamma[:,:,:,:,iw2,:,:,:]=(Gamma1[:,:,:,:,iw2,:,:,:]+Gamma1[:,:,:,:,NwG4-iw2-1,:,:,:])/2
-        #Gamma1 = self.Gamma.copy()
-        #for iw1 in range(NwG4):
-        #    self.Gamma[iw1,:,:,:,:,:,:,:]=(Gamma1[iw1,:,:,:,:,:,:,:]+Gamma1[NwG4-iw1-1,:,:,:,:,:,:,:])/2
+            self.Lambdatemp = sqrt(np.diag(self.lambdastemp))
+            self.chiMasqrt = np.dot(self.evecstemp,np.dot(self.Lambdatemp,linalg.inv(self.evecstemp)))
+
+            self.pm3 =  np.dot(self.chiMasqrt,np.dot(self.GammaM, self.chiMasqrt))
+            self.pm3 *= 1.0/(self.invT*float(self.Nc))
+
+            #self.pm2m = self.pm2.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
+
+            #pm2m1 = self.pm2m.copy()
+            #for iw2 in range(NwG4):
+            #    self.pm2m[:,:,:,:,iw2,:,:,:]=(pm2m1[:,:,:,:,iw2,:,:,:]+pm2m1[:,:,:,:,NwG4-iw2-1,:,:,:])/2
+            #pm2m1 = self.pm2m.copy()
+            #for iw1 in range(NwG4):
+            #    self.pm2m[iw1,:,:,:,:,:,:,:]=(pm2m1[iw1,:,:,:,:,:,:,:]+pm2m1[NwG4-iw1-1,:,:,:,:,:,:,:])/2
+
+            #self.Gamma = self.GammaM.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
+
+            #Gamma1 = self.Gamma.copy()
+            #for iw2 in range(NwG4):
+            #    self.Gamma[:,:,:,:,iw2,:,:,:]=(Gamma1[:,:,:,:,iw2,:,:,:]+Gamma1[:,:,:,:,NwG4-iw2-1,:,:,:])/2
+            #Gamma1 = self.Gamma.copy()
+            #for iw1 in range(NwG4):
+            #    self.Gamma[iw1,:,:,:,:,:,:,:]=(Gamma1[iw1,:,:,:,:,:,:,:]+Gamma1[NwG4-iw1-1,:,:,:,:,:,:,:])/2
+
+    def buildSymmetricKernelMatrix(self):
+        print " Build symmetric kernel matrix M = 0.5*(Gamma(wn,wn')*chi0(wn')+Gamma(wn,-wn')*chi0(-wn')",'\n'
+
+        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb
+
+        if (self.calcCluster):
+            self.chiM = self.chic0M
+        else:
+            self.chiM = self.chi0M
+
+        GammaTemp = self.Gamma.reshape(NwG4, Nc*nOrb*nOrb, NwG4, Nc*nOrb*nOrb)
+        Gamma2 = np.zeros_like(GammaTemp)
+        for iw1 in range(self.NwG4):
+            for iw2 in range(self.NwG4):
+                Gamma2[iw1,:,iw2,:] = GammaTemp[iw1,:,self.NwG4-iw2-1]
+        Gamma2 = Gamma2.reshape(NwG4*Nc*nOrb*nOrb, NwG4*Nc*nOrb*nOrb)
+        self.pm4 = 0.5*(np.dot(self.GammaM, self.chiM) + np.dot(Gamma2,conj(self.chiM)))
+        # self.pm *= 1.0/(self.invT*float(self.Nc)*float(self.nOrb))
+        self.pm4 *= 1.0/(self.invT*float(self.Nc))
 
     def calcKernelEigenValues(self):
         nt = self.nt; Nc = self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
-        w,v = linalg.eig(self.pm2)
+        w,v = linalg.eig(self.pm)
         wt = abs(w-1)
         ilead = argsort(wt)
         self.lambdas = w[ilead]
         self.evecs = v[:,ilead]
         self.evecs = self.evecs.reshape(NwG4,Nc,nOrb,nOrb,nt)
-
-        w2,v2 = linalg.eig(self.pm2)
-        wt2 = abs(w2-1)
-        ilead2 = argsort(wt2)
-        self.lambdas2 = w2[ilead2]
-        self.evecs2 = v2[:,ilead2]
-        self.evecs2 = self.evecs2.reshape(NwG4,Nc,nOrb,nOrb,nt)
         
+        print "Leading 16 eigenvalues of BSE (no symmetrization)",'\n'
+        for i in range(16):
+            if abs(imag(self.lambdas[i]))<1.e06:
+                print real(self.lambdas[i])
+                
+        print '\n',"Leading 16 eigenvalues of BSE (no symmetrization)",self.lambdas[0:16]
+
         # compare with data obtained by analysis code
         if self.compareHDF5:
             data = h5py.File(self.file_analysis_hdf5,'r')
@@ -877,15 +910,59 @@ class BSE:
                     print ii, datafile[ii,0], real(self.lambdas[ii])
                             
         
-        print "Leading 16 eigenvalues of lattice Bethe-salpeter equation",'\n'
-        for i in range(16):
-            if abs(imag(self.lambdas[i]))<1.e06:
-                print real(self.lambdas[i])
-                
-        print "Leading 16 eigenvalues of lattice Bethe-salpeter equation",self.lambdas[0:16]
-        
+        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
+                                   "PARTICLE_PARTICLE_UP_DOWN",\
+                                   "PARTICLE_PARTICLE_SINGLET"):
+            w2,v2 = linalg.eig(self.pm2)
+            wt2 = abs(w2-1)
+            ilead2 = argsort(wt2)
+            self.lambdas2 = w2[ilead2]
+            self.evecs2 = v2[:,ilead2]
+            self.evecs2 = self.evecs2.reshape(NwG4,Nc,nOrb,nOrb,nt)
+            print '\n', "Leading 16 eigenvalues of BSE (sqrt(chi)*Gamma*sqrt(chi))",self.lambdas2[0:16]
+
+            w3,v3 = linalg.eig(self.pm3)
+            wt3 = abs(w3-1)
+            ilead3 = argsort(wt3)
+            self.lambdas3 = w3[ilead3]
+            self.evecs3 = v3[:,ilead3]
+            self.evecs3 = self.evecs3.reshape(NwG4,Nc,nOrb,nOrb,nt)
+            print '\n', "Leading 16 eigenvalues of BSE (Peizhi Mai's PRB 103, 144514 (2021) Eq.(8))",self.lambdas3[0:16]
+            
+            w4,v4 = linalg.eig(self.pm4)
+            wt4 = abs(w4-1)
+            ilead4 = argsort(wt4)
+            self.lambdas4 = w4[ilead4]
+            self.evecs4 = v4[:,ilead4]
+            self.evecs4 = self.evecs4.reshape(NwG4,Nc,nOrb,nOrb,nt)
+            print '\n', "Leading 16 eigenvalues of BSE (Maier's buildSymmetricKernelMatrix)",self.lambdas4[0:16]
+            
+    def AnalyzeEigvec(self):
         # only concerned about Cu-Cu eigenvalue by setting orb index to be 0
-        print "Analyze eigenval and eigvec:",'\n'
+        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb
+
+        print '\n', "Analyze eigenval and eigvec (no symmetrization):",'\n'
+        self.AnalyzeEigvec_execute(self.evecs, self.lambdas, 'BSE (no symmetrization)')         
+
+        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
+                                   "PARTICLE_PARTICLE_UP_DOWN",\
+                                   "PARTICLE_PARTICLE_SINGLET"):
+            print '\n', "Analyze eigvec for BSE (sqrt(chi)*Gamma*sqrt(chi)):"
+            self.AnalyzeEigvec_execute(self.evecs2, self.lambdas2, 'BSE (sqrt(chi)*Gamma*sqrt(chi))')
+            
+            print '\n', "Analyze eigvec for BSE (Peizhi Mai's PRB 103, 144514 (2021) Eq.(8)):"
+            self.AnalyzeEigvec_execute(self.evecs3, self.lambdas3, 'BSE (Peizhi Mai PRB 103, 144514 (2021) Eq.(8))')
+            
+            print '\n', "Analyze eigvec for BSE (Maier's buildSymmetricKernelMatrix):"
+            self.AnalyzeEigvec_execute(self.evecs4, self.lambdas4, 'BSE (Maier buildSymmetricKernelMatrix)')
+        else:
+            print '\n', "leading eigenvalue", self.Tval, ' ', real(self.lambdas[0])
+
+    def AnalyzeEigvec_execute(self,evecs,lambdas,label):
+        #Now find d-wave eigenvalue
+        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb
+        gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
+
         iw0=int(NwG4/2)
         for io in range(nOrb):
             print '================='
@@ -893,59 +970,56 @@ class BSE:
             for inr in range(16):
                 imax = argmax(self.evecs[iw0,:,io,io,inr])
                 if (abs(self.evecs[iw0-1,imax,io,io,inr]-self.evecs[iw0,imax,io,io,inr]) <= 1.0e-1):
-                    print "Eigenval is ", real(self.lambdas[inr]), "even frequency"
+                    print label, " Eigenval is ", real(self.lambdas[inr]), "even frequency"
                 else:
-                    print "Eigenval is ", real(self.lambdas[inr]), "odd frequency"
-                    
-                print "Eigenvec(pi*T) =",self.evecs[iw0-1,imax,io,io,inr], self.evecs[iw0,imax,io,io,inr]
+                    print label, " Eigenval is ", real(self.lambdas[inr]), "odd frequency"
 
-        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
-            #Now find d-wave eigenvalue
-            gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
-                                                    
-            for io in range(nOrb):
-                print '================='
-                print 'For d-wave'
-                self.found_d=False
-                self.ind_d=0
-                for ia in range(nt):
-                    # first term check if Phi has d-wave in k space; 2nd term check if even frequency:
-                    r1 = dot(gk,self.evecs[int(NwG4/2),:,io,io,ia]) * sum(self.evecs[:,self.iKPi0,io,io,ia])
-                    if abs(r1) >= 2.0e-1: 
-                        self.lambdad = self.lambdas[ia]
-                        self.ind_d   = ia
-                        self.found_d = True
-                        break
-                if self.found_d: 
-                    print "orb ",io," d-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
+                print label, " Eigenvec(pi*T) =",self.evecs[iw0-1,imax,io,io,inr], self.evecs[iw0,imax,io,io,inr]
 
-                    # write data:
+        for io in range(nOrb):
+            print '================='
+            print 'For d-wave'
+            self.found_d=False
+            self.ind_d=0
+            for ia in range(nt):
+                # first term check if Phi has d-wave in k space; 2nd term check if even frequency:
+                r1 = dot(gk,evecs[int(NwG4/2),:,io,io,ia]) * sum(evecs[:,self.iKPi0,io,io,ia])
+                if abs(r1) >= 2.0e-1: 
+                    self.lambdad = lambdas[ia]
+                    self.ind_d   = ia
+                    self.found_d = True
+                    break
+            if self.found_d: 
+                print label, " orb ",io," d-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
+
+                # write data:
+                if self.write_data_file:
                     fname = 'Eigenvec_dwave_vs_iwn_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
-                    self.write_data_3cols(fname, self.wnSet[NwG4/2:NwG4], self.evecs[NwG4/2:NwG4,self.iKPi0,io,io,ia],self.evecs[NwG4/2:NwG4,self.iK0Pi,io,io,ia])
-                    #self.calcPdFromEigenFull(self.ind_d)
-                    #self.calcPdFromEigenFull2(self.ind_d)
+                    self.write_data_3cols(fname, self.wnSet[NwG4/2:NwG4],\
+                                          evecs[NwG4/2:NwG4,self.iKPi0,io,io,ia],\
+                                          evecs[NwG4/2:NwG4,self.iK0Pi,io,io,ia])
                 #self.calcPdFromEigenFull(self.ind_d)
+                #self.calcPdFromEigenFull2(self.ind_d)
+            #self.calcPdFromEigenFull(self.ind_d)
 
-            #Now find sx-wave eigenvalue
-            for io in range(nOrb):
-                print '================='
-                print 'For sx-wave'
-                gk = cos(self.Kvecs[:,0]) + cos(self.Kvecs[:,1]) # sxwave form factor
-                self.found_d =False
-                self.ind_d   =0
-                for ia in range(nt):
-                    r1 = dot(gk,self.evecs[int(self.NwG4/2),:,io,io,ia]) * sum(self.evecs[:,self.iKPi0,io,io,ia])
-                    if abs(r1) >= 2.0e-1: 
-                        self.lambdad = self.lambdas[ia]
-                        self.ind_d = ia
-                        self.found_d=True
-                        break
-                if self.found_d: 
-                    print "orb ",io," sx-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
-                    
-        else:
-            print "leading eigenvalue", self.Tval, ' ', real(self.lambdas[0])
-                
+        #Now find sx-wave eigenvalue
+        for io in range(nOrb):
+            print '================='
+            print 'For sx-wave'
+            gk = cos(self.Kvecs[:,0]) + cos(self.Kvecs[:,1]) # sxwave form factor
+            self.found_d =False
+            self.ind_d   =0
+            for ia in range(nt):
+                r1 = dot(gk,evecs[int(self.NwG4/2),:,io,io,ia]) * sum(evecs[:,self.iKPi0,io,io,ia])
+                if abs(r1) >= 2.0e-1: 
+                    self.lambdad = lambdas[ia]
+                    self.ind_d = ia
+                    self.found_d=True
+                    break
+            if self.found_d: 
+                print label, " orb ",io," sx-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
+
+            
     def calcKernelEigenValuesnew(self):
         nt = self.nt; Nc = self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
         w,v = linalg.eig(self.pm2)
@@ -1306,7 +1380,7 @@ class BSE:
                 for l3 in range(nOrb):
                     for l4 in range(nOrb):
                         csum[l1,l2,l3,l4] = sum(G2[:,:,l1,l2,:,:,l3,l4]) #/= (self.Nc*self.invT)#**2
-                        print "orb ",io," lattice susceptibility = ",self.Tval, ' ',real(csum[l1,l2,l3,l4])
+                        print "lattice susceptibility = ",self.Tval, ' ',real(csum[l1,l2,l3,l4])
 
     def determine_specialK(self):
         self.iKPiPi = 0
@@ -1611,9 +1685,9 @@ class BSE:
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04]
 #Ts = [0.1]
-channels = ['phcharge']#,'phmag']
+channels = ['phcharge','phmag']
 channels = ['phmag']
-qs = ['00']#,'pi20','pi0','pipi2','pipi','pi2pi2']
+qs = ['00','pi20','pi0','pipi2','pipi','pi2pi2']
 qs = ['pipi']
 
 for T_ind, T in enumerate(Ts):
@@ -1644,5 +1718,6 @@ for T_ind, T in enumerate(Ts):
                     calcCluster=False,\
                     useGamma_hdf5=False,\
                     nkfine=100,\
-                    compare_with_analysishdf5=False)
-                
+                    compare_with_analysishdf5=False,\
+                    write_data_file=False)
+              
