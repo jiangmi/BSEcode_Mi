@@ -31,7 +31,7 @@ class BSE:
         self.reorderG4()
         self.setupMomentumTables()
         self.determine_iKPiPi()
-        # if symmetrize_G4: self.symmetrizeG4()
+        #if symmetrize_G4: self.symmetrizeG4()
         print ("Index of (pi,pi): ",self.iKPiPi)
         self.calcChi0Cluster()
         self.calcGammaIrr()
@@ -965,7 +965,7 @@ class BSE:
 
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04]
-#Ts = [0.1]
+Ts = [0.4]
 channels = ['phcharge']#,'phmag']
 channels = ['phmag']
 qs = ['00']#,'pi20','pi0','pipi2','pipi','pi2pi2']

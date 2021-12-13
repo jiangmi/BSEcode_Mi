@@ -325,11 +325,14 @@ class BSE:
             print "Imposing symmetry in wn"
             self.apply_symmetry_in_wn(self.G4)
 
-        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
-            # print("G4.shape:",self.G4.shape)
-            print "Imposing transpose symmetry"
-            self.apply_transpose_symmetry(self.G4)
-            if self.phSymmetry: self.apply_ph_symmetry_pp(self.G4)
+       # 2021.12.13:
+       # Not sure why T.Maier's original code solveBSE_fromG4_multiOrbit_200622.py does not include below:
+       # To get the same lambda's, comment these out tempororily
+       # if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
+       #     # print("G4.shape:",self.G4.shape)
+       #     print "Imposing transpose symmetry"
+       #     self.apply_transpose_symmetry(self.G4)
+       #     if self.phSymmetry: self.apply_ph_symmetry_pp(self.G4)
 
         # 16A cluster [[4,2],[0,4]]
         if (self.cluster[0,0] == 4.0 and self.cluster[0,1] == 2.0 and self.cluster[1,0] == 0.0 and self.cluster[1,1] == 4.0):
@@ -1684,7 +1687,7 @@ class BSE:
                                         
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04]
-#Ts = [0.1]
+Ts = [0.4]
 channels = ['phcharge','phmag']
 channels = ['phmag']
 qs = ['00','pi20','pi0','pipi2','pipi','pi2pi2']
@@ -1705,7 +1708,7 @@ for T_ind, T in enumerate(Ts):
                 print "\n =================================\n"
                 print "T =", T
                 # model='square','bilayer','Emery'
-                BSE('square',\
+                BSE('bilayer',\
                     Ts[T_ind],\
                     file_tp,\
                     file_sp,\
