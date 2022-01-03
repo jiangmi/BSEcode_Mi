@@ -1383,7 +1383,7 @@ class BSE:
                 for l3 in range(nOrb):
                     for l4 in range(nOrb):
                         csum[l1,l2,l3,l4] = sum(G2[:,:,l1,l2,:,:,l3,l4]) #/= (self.Nc*self.invT)#**2
-                        print "lattice susceptibility = ",self.Tval, ' ',real(csum[l1,l2,l3,l4])
+                        print 'orb ',l1,l2,l3,l4," lattice susceptibility = ",self.Tval, ' ',real(csum[l1,l2,l3,l4])
 
     def determine_specialK(self):
         self.iKPiPi = 0
@@ -1686,8 +1686,8 @@ class BSE:
 
                                         
 ###################################################################################
-Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04]
-Ts = [0.4]
+Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
+#Ts = [0.4]
 channels = ['phcharge','phmag']
 channels = ['phmag']
 qs = ['00','pi20','pi0','pipi2','pipi','pi2pi2']
@@ -1697,6 +1697,7 @@ for T_ind, T in enumerate(Ts):
     for ch in channels:
         for q in qs:
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag.hdf5'
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             #file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             #file_tp = './Nc4/T='+str(Ts[T_ind])+'/dca_tp.hdf5'

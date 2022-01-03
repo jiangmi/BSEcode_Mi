@@ -10,7 +10,7 @@ from matplotlib.pyplot import *
 class BSE:
 
 
-    def __init__(self,fileG4,fileG="data.DCA_sp.hdf5",draw=False,useG0=False,symmetrize_G4=False,phSymmetry=False,calcRedVertex=False,calcCluster=False,nkfine=100):
+    def __init__(self,Tval,fileG4,fileG="data.DCA_sp.hdf5",draw=False,useG0=False,symmetrize_G4=False,phSymmetry=False,calcRedVertex=False,calcCluster=False,nkfine=100):
         self.vertex_channels = ["PARTICLE_PARTICLE_UP_DOWN",          \
                                 "PARTICLE_HOLE_CHARGE",               \
                                 "PARTICLE_HOLE_MAGNETIC",             \
@@ -18,6 +18,7 @@ class BSE:
                                 "PARTICLE_HOLE_LONGITUDINAL_UP_DOWN", \
                                 "PARTICLE_HOLE_TRANSVERSE"]
         
+        self.Tval = Tval
         self.fileG4 = fileG4
         self.fileG = fileG
         self.draw = draw
@@ -30,7 +31,7 @@ class BSE:
         self.readData()
         self.reorderG4()
         self.setupMomentumTables()
-        self.determine_iKPiPi()
+        self.determine_specialK()
         #if symmetrize_G4: self.symmetrizeG4()
         print ("Index of (pi,pi): ",self.iKPiPi)
         self.calcChi0Cluster()
@@ -42,6 +43,7 @@ class BSE:
         else:
           self.buildKernelMatrix()
         self.calcKernelEigenValues()
+        self.AnalyzeEigvec()
         self.transformEvecsToKz()
         # self.calcSus()
 
@@ -496,8 +498,7 @@ class BSE:
         self.pm = 0.5*(np.dot(self.GammaM, self.chiM) + np.dot(Gamma2,conj(self.chiM)))
         # self.pm *= 1.0/(self.invT*float(self.Nc)*float(self.nOrb))
         self.pm *= 1.0/(self.invT*float(self.Nc))
-
-
+        
     def calcKernelEigenValues(self):
         nt = self.nt; Nc = self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
         w,v = linalg.eig(self.pm)
@@ -507,6 +508,61 @@ class BSE:
         self.evecs = v[:,ilead]
         self.evecs = self.evecs.reshape(NwG4,Nc,nOrb,nOrb,16)
         print ("Leading eigenvalues of lattice Bethe-salpeter equation",self.lambdas)
+        
+    def AnalyzeEigvec(self):
+        #Now find d-wave eigenvalue
+        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb
+        gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
+
+        iw0=int(NwG4/2)
+        for io in range(nOrb):
+            print '================='
+            print 'orb ',io
+            for inr in range(16):
+                imax = argmax(self.evecs[iw0,:,io,io,inr])
+                if (abs(self.evecs[iw0-1,imax,io,io,inr]-self.evecs[iw0,imax,io,io,inr]) <= 1.0e-1):
+                    print "Eigenval is ", real(self.lambdas[inr]), "even frequency"
+                else:
+                    print "Eigenval is ", real(self.lambdas[inr]), "odd frequency"
+
+                print "Eigenvec(pi*T) =",self.evecs[iw0-1,imax,io,io,inr], self.evecs[iw0,imax,io,io,inr]
+
+        for io in range(nOrb):
+            print '================='
+            print 'For d-wave'
+            self.found_d=False
+            self.ind_d=0
+            for ia in range(16):
+                # first term check if Phi has d-wave in k space; 2nd term check if even frequency:
+                r1 = dot(gk,self.evecs[iw0,:,io,io,ia]) * sum(self.evecs[:,self.iKPi0,io,io,ia])
+                if abs(r1) >= 2.0e-1: 
+                    self.lambdad = self.lambdas[ia]
+                    self.ind_d   = ia
+                    self.found_d = True
+                    break
+            if self.found_d: 
+                print "orb ",io," d-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
+
+                #self.calcPdFromEigenFull(self.ind_d)
+                #self.calcPdFromEigenFull2(self.ind_d)
+            #self.calcPdFromEigenFull(self.ind_d)
+
+        #Now find sx-wave eigenvalue
+        for io in range(nOrb):
+            print '================='
+            print 'For sx-wave'
+            gk = cos(self.Kvecs[:,0]) + cos(self.Kvecs[:,1]) # sxwave form factor
+            self.found_d =False
+            self.ind_d   =0
+            for ia in range(16):
+                r1 = dot(gk,self.evecs[int(self.NwG4/2),:,io,io,ia]) * sum(self.evecs[:,self.iKPi0,io,io,ia])
+                if abs(r1) >= 2.0e-1: 
+                    self.lambdad = self.lambdas[ia]
+                    self.ind_d = ia
+                    self.found_d=True
+                    break
+            if self.found_d: 
+                print "orb ",io," sx-wave eigenvalue", self.Tval, ' ', real(self.lambdad)
 
     def transformEvecsToKz(self):
         self.phi0  = 1./sqrt(2.)*(self.evecs[:,:,0,0,:] + self.evecs[:,:,1,0,:])
@@ -777,18 +833,25 @@ class BSE:
 
 ####### Momentum domain functions
 
-    def determine_iKPiPi(self):
+    def determine_specialK(self):
         self.iKPiPi = 0
+        self.iKPi0  = 0
         Nc=self.Nc
         for iK in range(Nc):
             kx = abs(self.Kvecs[iK,0] - np.pi)
             ky = abs(self.Kvecs[iK,1] - np.pi)
+            kx2 = abs(self.Kvecs[iK,0])
+            ky2 = abs(self.Kvecs[iK,1])
             if kx >= 2*np.pi: kx-=2.*pi
             if ky >= 2*np.pi: ky-=2.*pi
+            if ky2 >= 2*np.pi: ky-=2.*pi
             if kx**2+ky**2 <= 1.0e-5:
                 self.iKPiPi = iK
-                break
-
+            if kx**2+ky2**2 <= 1.0e-5:
+                self.iKPi0 = iK
+            if kx2**2+ky**2 <= 1.0e-5:
+                self.iK0Pi = iK
+                
     def K_2_iK(self,Kx,Ky):
         delta=1.0e-4
         # First map (Kx,Ky) into [0...2pi,0...2pi] region where Kvecs are defined
@@ -978,7 +1041,7 @@ for T_ind, T in enumerate(Ts):
         for q in qs:
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag.hdf5'
-            #file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            #file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             #file_tp = './Nc4/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
             file_analysis_hdf5 = './T='+str(Ts[T_ind])+'/analysis.hdf5'
@@ -988,7 +1051,8 @@ for T_ind, T in enumerate(Ts):
                 print "\n =================================\n"
                 print "T =", T
                 # model='square','bilayer','Emery'
-                BSE(file_tp,\
+                BSE(T,\
+                    file_tp,\
                     draw=False,\
                     useG0=False,\
                     symmetrize_G4=True,\
