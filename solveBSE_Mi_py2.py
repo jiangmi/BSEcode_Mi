@@ -370,16 +370,17 @@ class BSE:
                             for l2 in range(self.nOrb):
                                 for l3 in range(self.nOrb):
                                     for l4 in range(self.nOrb):
-                                        c1 = self.G4[iw2,ik2,iw1,ik1,l4,l3,l2,l1]
-                                        self.G4r[iw1,ik1,l1,l2,iw2,ik2,l3,l4] = c1
-                                        
-                                        if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":
-                                            if (l1==l3) & (l4==l2):
+                                        if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":                                      
+                                            c1= self.G4[iw1,ik1,iw2,ik2,l1,l2,l3,l4] 
+                                            self.G4r[iw1,ik1,l1,l3,iw2,ik2,l4,l2]  = c1                                        
+                                            if (l1==l3) & (l4==l2):                                                            
                                                 G4susQz0 += c1
                                                 G4susQzPi += c1*exp(1j*np.pi*(l2-l3))
-                                        elif self.vertex_channel=="PARTICLE_PARTICLE_UP_DOWN":
-                                            if (l1!=l2) & (l3!=l4):
-                                                G4susQz0 += c1
+                                        elif self.vertex_channel=="PARTICLE_PARTICLE_UP_DOWN":                                 
+                                            c1 = self.G4[iw2,ik2,iw1,ik1,l4,l3,l2,l1]
+                                            self.G4r[iw1,ik1,l1,l2,iw2,ik2,l3,l4] = c1                                         
+                                            if (l1!=l2) & (l3!=l4):                                                            
+                                                G4susQz0 += c1  
 
         G4rtemp = self.G4r.copy()
         self.G4M = self.G4r.reshape(self.nt,self.nt)
