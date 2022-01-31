@@ -968,11 +968,22 @@ class BSE:
         gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
 
         iw0=int(NwG4/2)
+
+     #   print 'leading eigenvector freq dependence:'
+     #   for io in range(nOrb):
+     #       print '================='
+     #       print 'orb ',io
+     #       for ic in range(Nc):
+     #           print 'k=',ic
+     #           for iw in range(iw0):
+     #               print real(self.evecs[iw0+iw,ic,io,io,0]), real(self.evecs[iw0-1-iw,ic,io,io,0])
+
         for io in range(nOrb):
             print '================='
             print 'orb ',io
             for inr in range(16):
                 imax = argmax(self.evecs[iw0,:,io,io,inr])
+
                 if (abs(self.evecs[iw0-1,imax,io,io,inr]-self.evecs[iw0,imax,io,io,inr]) <= 1.0e-1):
                     print label, " Eigenval is ", real(self.lambdas[inr]), "even frequency"
                 else:
@@ -980,6 +991,7 @@ class BSE:
 
                 print label, " Eigenvec(pi*T) =",self.evecs[iw0-1,imax,io,io,inr], self.evecs[iw0,imax,io,io,inr]
 
+        # d-wave even frequency
         for io in range(nOrb):
             print '================='
             print 'For d-wave'
@@ -1005,6 +1017,31 @@ class BSE:
                 #self.calcPdFromEigenFull(self.ind_d)
                 #self.calcPdFromEigenFull2(self.ind_d)
             #self.calcPdFromEigenFull(self.ind_d)
+
+        # odd frequency
+       # for io in range(nOrb):
+       #     print '================='
+       #     print 'For d-wave'
+       #     gk = cos(self.Kvecs[:,0]) + cos(self.Kvecs[:,1]) # sxwave form factor
+       #     self.found_d=False
+       #     self.ind_d=0
+       #     for ia in range(nt):
+                # first term check if Phi has d-wave in k space; 2nd term check if even frequency:
+       #         r1 = dot(gk,evecs[int(NwG4/2),:,io,io,ia])
+       #         if abs(r1) >= 2.0e-1 and sum(evecs[:,self.iKPi0,io,io,ia])<1.0e-3:
+       #             self.lambdad = lambdas[ia]
+       #             self.ind_d   = ia
+       #             self.found_d = True
+       #             break
+       #     if self.found_d:
+       #         print label, " orb ",io," d-wave odd freq eigenvalue", self.Tval, ' ', real(self.lambdad)
+
+                # write data:
+       #         if self.write_data_file:
+       #             fname = 'Eigenvec_dwave_vs_iwn_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
+       #             self.write_data_3cols(fname, self.wnSet[NwG4/2:NwG4],\
+       #                                   evecs[NwG4/2:NwG4,self.iKPi0,io,io,ia],\
+       #                                   evecs[NwG4/2:NwG4,self.iK0Pi,io,io,ia])
 
         #Now find sx-wave eigenvalue
         for io in range(nOrb):
@@ -1104,12 +1141,12 @@ class BSE:
                             PS12 += self.G4r[iw1,ik1,0,0,iw2,ik2,1,1] + self.G4r[iw1,ik1,1,1,iw2,ik2,0,0]
 
             PS11 /= self.Nc*self.invT
-            print "cluster susceptibility for layer 1 = ",self.Tval, ' ',PS11
+            print "cluster susceptibility for layer 1 = ",self.Tval, ' ', real(PS11)
             #print("chi0kiw s-wave Pairfield susceptibility error2 for Cu-Cu is ",PSccerror2)
             PS22 /= self.Nc*self.invT
-            print "cluster susceptibility for layer 2 = ",self.Tval, ' ',PS22
+            print "cluster susceptibility for layer 2 = ",self.Tval, ' ', real(PS22)
             PS12 /= self.Nc*self.invT 
-            print "clusterd susceptibility for between layer 1 and 2 = ",self.Tval, ' ',PS12
+            print "clusterd susceptibility for between layer 1 and 2 = ", self.Tval, ' ', real(PS12)
             PS = PS11+PS22+PS12
             print "cluster susceptibility = ",self.Tval, ' ',PS                                                    
     
@@ -1688,17 +1725,19 @@ class BSE:
                                         
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
-#Ts = [0.4]
+Ts = [0.15]
 channels = ['phcharge','phmag']
 channels = ['phmag']
 qs = ['00','pi20','pi0','pipi2','pipi','pi2pi2']
 qs = ['pipi']
+Nv = [0]#,1,2,3,4,5,6,7,8]
 
 for T_ind, T in enumerate(Ts):
-    for ch in channels:
+    #for ch in channels:
+    for v in Nv:
         for q in qs:
-            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
-            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag.hdf5'
+            #file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_'+str(v)+'.hdf5'
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             #file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             #file_tp = './Nc4/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
