@@ -80,13 +80,13 @@ class BSE:
         '''
         if calcRedVertex: self.calcReducibleLatticeVertex()
         if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
-            self.calcPsCluster()
-            self.calcDwaveSCClusterSus()
+            self.calcPsCluster()      # s-wave
+            self.calcSCClusterSus()   # es- and d-wave
             if calcCluster == False: self.calcLatticeSCSus()
-            #self.calcDwaveSCClusterSus()
         else:
             self.calcClusterSus()
             self.calcLatticeSus()
+            self.calcPairSus_bilayer()
 
     # read basic parameters from the data and the cluster one and two particle Green's function
     def readData(self):
@@ -914,9 +914,9 @@ class BSE:
                     print ii, datafile[ii,0], real(self.lambdas[ii])
                             
         
-        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
-                                   "PARTICLE_PARTICLE_UP_DOWN",\
-                                   "PARTICLE_PARTICLE_SINGLET"):
+        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING"):#,\
+    #                               "PARTICLE_PARTICLE_UP_DOWN",\
+    #                               "PARTICLE_PARTICLE_SINGLET"):
             w2,v2 = linalg.eig(self.pm2)
             wt2 = abs(w2-1)
             ilead2 = argsort(wt2)
@@ -948,9 +948,9 @@ class BSE:
         print '\n', "Analyze eigenval and eigvec (no symmetrization):",'\n'
         self.AnalyzeEigvec_execute(self.evecs, self.lambdas, 'BSE (no symmetrization)')         
 
-        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
-                                   "PARTICLE_PARTICLE_UP_DOWN",\
-                                   "PARTICLE_PARTICLE_SINGLET"):
+        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING"):#,\
+     #                              "PARTICLE_PARTICLE_UP_DOWN",\
+     #                              "PARTICLE_PARTICLE_SINGLET"):
             print '\n', "Analyze eigvec for BSE (sqrt(chi)*Gamma*sqrt(chi)):"
             self.AnalyzeEigvec_execute(self.evecs2, self.lambdas2, 'BSE (sqrt(chi)*Gamma*sqrt(chi))')
             
@@ -1115,6 +1115,9 @@ class BSE:
     # Below for cluster susceptibilities
     ########################################################################
     def calcClusterSus(self):
+        '''
+        For non-SC channels
+        '''
         print (" ")
         print "Calculate cluster susceptibility via G4 summation:"
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
@@ -1221,7 +1224,7 @@ class BSE:
         #PS = PScc+PSoxox+PSoyoy+PScox+PScoy+PSoxoy
         #print("chi0kiw (sum over 512 w) s-wave Pairfield susceptibility is ",PS)
 
-    def calcDwaveSCClusterSus(self):
+    def calcSCClusterSus(self):
         '''
         For PARTICLE_PARTICLE_UP_DOWN channel
         '''
@@ -1231,7 +1234,7 @@ class BSE:
         gkd  = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1])
         csum11 = 0.0; csum22 = 0.0; csum12 = 0.0; 
         ccsum11 = 0.0; ccsum22 = 0.0; ccsum12 = 0.0
-        
+
         if self.model=='square':
             for iK1 in range(self.Nc):
                 for iK2 in range(self.Nc):
@@ -1245,12 +1248,12 @@ class BSE:
             print " "
             for iK1 in range(self.Nc):
                 for iK2 in range(self.Nc):
-                    csum11 += gkd[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,0,0])*gkd[iK2]
+                    ccsum11 += gkd[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,0,0])*gkd[iK2]
 
             ccsum11 /= self.Nc*self.invT
 
             #self.Pdc = real(csum)
-            print "G4 d-wave cluster Pairfield susceptibility: ",csum11
+            print "G4 d-wave cluster Pairfield susceptibility: ",ccsum11
                                                     
         elif self.model=='bilayer': 
             for iK1 in range(self.Nc):
@@ -1270,43 +1273,30 @@ class BSE:
 
             print (" ")
             print (" ")
+            G4spm = 0.25*(G4r[:,:,0,1,:,:,0,1]+G4r[:,:,0,1,:,:,1,0]+G4r[:,:,1,0,:,:,0,1]+G4r[:,:,1,0,:,:,1,0])
+            Ps = sum(G4spm)/(float(self.Nc)*self.invT)
+            print "G4 spm cluster Pairfield susceptibility: ", real(Ps)
+
+            print (" ")
+            print (" ")
             for iK1 in range(self.Nc):
                 for iK2 in range(self.Nc):
-                    csum11 += gkd[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,0,0])*gkd[iK2]
-                    csum22 += gkd[iK1]*sum(self.G4r[:,iK1,1,1,:,iK2,1,1])*gkd[iK2]
-                    csum12 += gkd[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,1,1])*gkd[iK2] \
-                            + gkd[iK1]*sum(self.G4r[:,iK1,1,1,:,iK2,0,0])*gkd[iK2]
+                    ccsum11 += gkd[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,0,0])*gkd[iK2]
+                    ccsum22 += gkd[iK1]*sum(self.G4r[:,iK1,1,1,:,iK2,1,1])*gkd[iK2]
+                    ccsum12 += gkd[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,1,1])*gkd[iK2] \
+                             + gkd[iK1]*sum(self.G4r[:,iK1,1,1,:,iK2,0,0])*gkd[iK2]
 
             ccsum11 /= self.Nc*self.invT
             ccsum22 /= self.Nc*self.invT
             ccsum12 /= self.Nc*self.invT
 
             #self.Pdc = real(csum)
-            print ("G4 d-wave 11 cluster Pairfield susceptibility: ",csum11)
-            print ("G4 d-wave 22 cluster Pairfield susceptibility: ",csum22)
-            print ("G4 d-wave 12 cluster Pairfield susceptibility: ",csum12)
+            print ("G4 d-wave 11 cluster Pairfield susceptibility: ",ccsum11)
+            print ("G4 d-wave 22 cluster Pairfield susceptibility: ",ccsum22)
+            print ("G4 d-wave 12 cluster Pairfield susceptibility: ",ccsum12)
             
         print " "
         print " "
-        
-    def calcPS(self):
-        # Calculate the S wave pairfield susp
-        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb; PS=0.0
-        testG4susQz0=0.0; testG4susQz1=0.0;
-        for ik1 in range(self.Nc):
-            for ik2 in range(self.Nc):
-                for iw1 in range(self.NwG4):
-                    for iw2 in range(self.NwG4):
-                        for l1 in range(nOrb):
-                            for l2 in range(nOrb):
-                                for l3 in range(nOrb):
-                                    for l4 in range(nOrb):
-                                        if (l1!=l2) & (l3!=l4):
-                                            testG4susQz0 += self.G4[iw2,ik2,iw1,ik1,l4,l3,l2,l1]
-                                        if (l1==l2) & (l3==l4) & (l1==l3):
-                                            testG4susQz1 += self.G4[iw2,ik2,iw1,ik1,l4,l3,l2,l1]
-        print "Test Cluster inter-orbital Chi(q=0):", testG4susQz0/(self.invT*self.Nc*4.0)
-        print "Test Cluster intra-orbital Chi(q=0):", testG4susQz1/(self.invT*self.Nc*4.0)
     
     ########################################################################
     # Below for lattice susceptibilities
@@ -1322,6 +1312,7 @@ class BSE:
         
     def calcLatticeSCSus(self):
         '''
+        For PARTICLE_PARTICLE_UP_DOWN channel
         Calculate lattice d-wave susceptibility via Eq.(22-30) in PRB 64, 195130(2001)
         # Calculate from gd*G4*gd = gd*GG*gd + gd*GG*GammaRed*GG*gd
         # GammaRed = self.GammaRed.reshape(self.NwG4*self.Nc,self.NwG4*self.Nc)
@@ -1402,6 +1393,7 @@ class BSE:
 
     def calcLatticeSus(self):
         '''
+        For non-PARTICLE_PARTICLE_UP_DOWN channels
         Eq.(20) is simply inv(chi) = inv(chi0) - Gamma_c 
         Note the DCA substitution from Gamma_cluster to Gamma_lattice
         '''
@@ -1422,6 +1414,45 @@ class BSE:
                     for l4 in range(nOrb):
                         csum[l1,l2,l3,l4] = sum(G2[:,:,l1,l2,:,:,l3,l4]) #/= (self.Nc*self.invT)#**2
                         print 'orb ',l1,l2,l3,l4," lattice susceptibility = ",self.Tval, ' ',real(csum[l1,l2,l3,l4])
+
+    def calcPairSus_bilayer(self):
+        '''
+        Copied from solveBSE_fromG4_DCA_bilayer_Maier2017.py on Feb.2, 2022
+        '''
+        print ("Calculate pairing chi in simpler way, similar to above calcLatticeSus")
+        NwG4=self.NwG4; Nc=self.Nc; nOrb=self.nOrb
+
+        gkd = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1])
+
+        norm = dot(gkd,gkd)
+        
+        # calculate lattice G4 Green's function
+        # from inv( inv(chi0)-inv(chic0)+inv(G4) ), see Eq.(20) in PRB 64, 195130(2001)
+        G2L = linalg.inv(linalg.inv(self.chi0M) - self.GammaM/(float(self.Nc)*self.invT))
+        G2 = G2L.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
+        
+        # for inter-band susceptibility
+        G2spm = 0.25*(G2[:,:,0,1,:,:,0,1]+G2[:,:,0,1,:,:,1,0]+G2[:,:,1,0,:,:,0,1]+G2[:,:,1,0,:,:,1,0])
+        Ps = sum(G2spm)/(float(self.Nc)*self.invT)
+
+        # for dwave susceptibility
+        # cos kx - cos ky form-factor corresponds to inter- and intra-layer d-wave susceptibility
+        G2band1 = G2[:,:,0,0,:,:,0,0]
+        G2band2 = G2[:,:,1,1,:,:,1,1]
+        G2band12 = 0.5*(G2[:,:,1,1,:,:,0,0]+G2[:,:,0,0,:,:,1,1])
+        
+        # axis=0 sum over first wn, then G2 becomes (iK,iwn,iK) so that axis=1 sum over second wn 
+        G2t0b1 = sum(sum(G2band1,axis=0),axis=1)
+        Pd_b1 = dot(gkd,dot(G2t0b1,gkd))/(float(self.Nc)*self.invT)
+        G2t0b2 = sum(sum(G2band2,axis=0),axis=1)
+        Pd_b2 = dot(gkd,dot(G2t0b2,gkd))/(float(self.Nc)*self.invT)
+        G2t0b12 = sum(sum(G2band12,axis=0),axis=1)
+        Pd_b12 = dot(gkd,dot(G2t0b12,gkd))/(float(self.Nc)*self.invT)
+
+        print "spm   susceptibility: ", real(Ps)
+        print "dwave susceptibility for intra-band 1:  ", real(Pd_b1)#/norm
+        print "dwave susceptibility for intra-band 2:  ", real(Pd_b2)#/norm
+        print "dwave susceptibility for inter-band 12: ", real(Pd_b12)#/norm
 
     def determine_specialK(self):
         self.iKPiPi = 0
@@ -1724,8 +1755,8 @@ class BSE:
 
                                         
 ###################################################################################
-Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
-Ts = [0.15]
+Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.25,  0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
+#Ts = [0.1]
 channels = ['phcharge','phmag']
 channels = ['phmag']
 qs = ['00','pi20','pi0','pipi2','pipi','pi2pi2']
@@ -1738,7 +1769,7 @@ for T_ind, T in enumerate(Ts):
         for q in qs:
             #file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_'+str(v)+'.hdf5'
-            file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_sc.hdf5'
             #file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             #file_tp = './Nc4/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
