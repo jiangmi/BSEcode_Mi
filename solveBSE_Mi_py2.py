@@ -82,11 +82,11 @@ class BSE:
         if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
             self.calcPsCluster()      # s-wave
             self.calcSCClusterSus()   # es- and d-wave
+            self.calcPairSus_bilayer()
             if calcCluster == False: self.calcLatticeSCSus()
         else:
             self.calcClusterSus()
             self.calcLatticeSus()
-            self.calcPairSus_bilayer()
 
     # read basic parameters from the data and the cluster one and two particle Green's function
     def readData(self):
@@ -1273,7 +1273,7 @@ class BSE:
 
             print (" ")
             print (" ")
-            G4spm = 0.25*(G4r[:,:,0,1,:,:,0,1]+G4r[:,:,0,1,:,:,1,0]+G4r[:,:,1,0,:,:,0,1]+G4r[:,:,1,0,:,:,1,0])
+            G4spm = 0.25*(self.G4r[:,:,0,1,:,:,0,1]+self.G4r[:,:,0,1,:,:,1,0]+self.G4r[:,:,1,0,:,:,0,1]+self.G4r[:,:,1,0,:,:,1,0])
             Ps = sum(G4spm)/(float(self.Nc)*self.invT)
             print "G4 spm cluster Pairfield susceptibility: ", real(Ps)
 
@@ -1326,10 +1326,11 @@ class BSE:
         csum = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
         csumxs = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
         ccsum = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
-        csum3 = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
+        csumspm = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
         csum1 = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
         csum1xs = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
         ccsum1 = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
+        csum1spm = np.zeros((nOrb,nOrb,nOrb,nOrb),dtype='complex')
         tempchi  = np.zeros((NwG4,Nc),dtype='complex')
 
         for iw1 in range(NwG4):
@@ -1347,9 +1348,12 @@ class BSE:
                                                         csum[l1,l2,l3,l4]  += self.chi0D[iw1,iK1,l1,l2,iw1,iK1,l5,l6] * self.GammaRed[iw1,iK1,l5,l6,iw2,iK2,l7,l8] * self.chi0D[iw2,iK2,l7,l8,iw2,iK2,l3,l4]
                                                         csumxs[l1,l2,l3,l4] += self.chi0XS[iw1,iK1,l1,l2,iw1,iK1,l5,l6] * self.GammaRed[iw1,iK1,l5,l6,iw2,iK2,l7,l8] * self.chi0XS[iw2,iK2,l7,l8,iw2,iK2,l3,l4]
                                                         ccsum[l1,l2,l3,l4] += gkd[iK1] * self.chi0[iw1,iK1,l1,l2,iw1,iK1,l5,l6] * self.GammaRed[iw1,iK1,l5,l6,iw2,iK2,l7,l8] * self.chi0[iw2,iK2,l7,l8,iw2,iK2,l3,l4] * gkd[iK2]
+                                                        csumspm[l1,l2,l3,l4] += self.chi0[iw1,iK1,l1,l2,iw1,iK1,l5,l6] * self.GammaRed[iw1,iK1,l5,l6,iw2,iK2,l7,l8] * self.chi0[iw2,iK2,l7,l8,iw2,iK2,l3,l4]
         csum[:,:,:,:] /= (self.Nc*self.invT)**2
         csumxs[:,:,:,:] /= (self.Nc*self.invT)**2
         ccsum[:,:,:,:] /= (self.Nc*self.invT)**2
+        csumspm[:,:,:,:] /= (self.Nc*self.invT)**2
+
         self.chi0D2sim = np.zeros((NwG4,Nc,nOrb,nOrb,nOrb,nOrb),dtype='complex')
         self.chi0XS2sim = np.zeros((NwG4,Nc,nOrb,nOrb,nOrb,nOrb),dtype='complex')
         self.chi0sim = np.zeros((NwG4,Nc,nOrb,nOrb,nOrb,nOrb),dtype='complex')
@@ -1365,14 +1369,23 @@ class BSE:
                         csum1[l1,l2,l3,l4]  = sum(self.chi0D2sim[:,:,l1,l2,l3,l4])/(self.Nc*self.invT)
                         csum1xs[l1,l2,l3,l4] = sum(self.chi0XS2sim[:,:,l1,l2,l3,l4])/(self.Nc*self.invT)
                         ccsum1[l1,l2,l3,l4] = sum(np.dot(self.chi0sim[:,:,l1,l2,l3,l4],gkd**2))/(self.Nc*self.invT)
+                        csum1spm[l1,l2,l3,l4] = sum(self.chi0sim[:,:,l1,l2,l3,l4])/(self.Nc*self.invT)
+
         csum[:,:,:,:] += csum1[:,:,:,:]
         csumxs[:,:,:,:] += csum1xs[:,:,:,:]
         ccsum[:,:,:,:] += ccsum1[:,:,:,:]
+        csumspm[:,:,:,:] += csum1spm[:,:,:,:]
+
         self.Pd = real(csum)
         self.csum = csum
         self.ccsum = ccsum
         self.Pxs = real(csumxs)
         self.Pdgkc = real(ccsum)
+
+        if self.model=='bilayer':
+            Pspm = 0.25*(csum[0,1,0,1]+csum[0,1,1,0]+csum[1,0,0,1]+csum[1,0,1,0])
+            print "spm SC susceptibility: ",self.Tval, ' ',real(Pspm)
+
         #csum3 = sum(real(self.chi0D2[abs(self.wnSet) <= 2.*4*self.t**2/self.U,:]))/(self.Nc*self.invT)
         print "Calculations from GammaRed:",'\n'
                                                     
@@ -1449,7 +1462,7 @@ class BSE:
         G2t0b12 = sum(sum(G2band12,axis=0),axis=1)
         Pd_b12 = dot(gkd,dot(G2t0b12,gkd))/(float(self.Nc)*self.invT)
 
-        print "spm   susceptibility: ", real(Ps)
+        print "spm   susceptibility: ", real(Ps)*2.
         print "dwave susceptibility for intra-band 1:  ", real(Pd_b1)#/norm
         print "dwave susceptibility for intra-band 2:  ", real(Pd_b2)#/norm
         print "dwave susceptibility for inter-band 12: ", real(Pd_b12)#/norm
@@ -1756,7 +1769,7 @@ class BSE:
                                         
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.25,  0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
-#Ts = [0.1]
+#Ts = [0.15]
 channels = ['phcharge','phmag']
 channels = ['phmag']
 qs = ['00','pi20','pi0','pipi2','pipi','pi2pi2']
