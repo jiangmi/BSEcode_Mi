@@ -370,7 +370,7 @@ class BSE:
                             for l2 in range(self.nOrb):
                                 for l3 in range(self.nOrb):
                                     for l4 in range(self.nOrb):
-                                        if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":                                      
+                                        if self.vertex_channel in ("PARTICLE_HOLE_MAGNETIC","PARTICLE_HOLE_CHARGE"):                                      
                                             c1= self.G4[iw1,ik1,iw2,ik2,l1,l2,l3,l4] 
                                             self.G4r[iw1,ik1,l1,l3,iw2,ik2,l4,l2]  = c1                                        
                                             if (l1==l3) & (l4==l2):                                                            
