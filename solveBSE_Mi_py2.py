@@ -54,8 +54,8 @@ class BSE:
         print ("Index of (pi,0): " ,self.iKPi0)
         #self.calcPS()
         
-        if symmetrizeG4: self.symmetrize_G4()
         self.reorder_G4()
+        if symmetrizeG4: self.symmetrize_G4()
         
         self.setupMomentumTables()
         self.determine_specialK()
@@ -320,48 +320,6 @@ class BSE:
             if (abs(float(self.Kvecs[iK,0]-Kx)) < delta) & (abs(float(self.Kvecs[iK,1]-Ky)) < delta): return iK
         print "No Kvec found!!!"
  
-    def symmetrize_G4(self):
-        print "symmetrize G4",'\n'
-        # for iv=0; see Maier's note on symmetries of G4
-        if self.iwm==0:
-            print "Imposing symmetry in wn"
-            self.apply_symmetry_in_wn(self.G4)
-
-           # 2021.12.13:
-           # Not sure why T.Maier's original code solveBSE_fromG4_multiOrbit_200622.py does not include below:
-           # To get the same lambda's as in some papers, may need comment out the following tempororily
-            if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
-                # print("G4.shape:",self.G4.shape)
-                print "Imposing transpose symmetry (for iv=0!)"
-                self.apply_transpose_symmetry(self.G4)  
-                
-                # 2022.2.21:
-                # Maier's latest code solveBSE_fromG4_BiLayer_newFormat_220211.py comment this out
-                # See apply_ph_symmetry_pp below for details
-                if self.phSymmetry: self.apply_ph_symmetry_pp(self.G4)
-
-        # 16A cluster [[4,2],[0,4]]
-        if (self.cluster[0,0] == 4.0 and self.cluster[0,1] == 2.0 and self.cluster[1,0] == 0.0 and self.cluster[1,1] == 4.0):
-            import symmetrize_Nc16A; sym=symmetrize_Nc16A.symmetrize()
-            print("symmetrizing 16A cluster")
-            sym.apply_point_group_symmetries_Q0(self.G4)
-       # elif (self.cluster[0,0] == 4 and self.cluster[0,1] == 0 and self.cluster[1,0] == 0 and self.cluster[1,1] == 4):
-       #     import symmetrize_Nc4x4; sym=symmetrize_Nc4x4.symmetrize()
-       #     print("symmetrizing 16B cluster")
-            sym.apply_point_group_symmetries_Q0(self.G4)
-        elif (self.cluster[0,0] == 2 and self.cluster[0,1] == 2 and self.cluster[1,0] == -4 and self.cluster[1,1] == 2):
-            import symmetrize_Nc12; sym=symmetrize_Nc12.symmetrize()
-            print("symmetrizing 12A cluster")
-            sym.apply_point_group_symmetries_Q0(self.G4)
-        elif (self.cluster[0,0] == 4 and self.cluster[0,1] == 4 and self.cluster[1,0] == 4 and self.cluster[1,1] == -4):
-            import symmetrize_Nc32A_v2; sym=symmetrize_Nc32A_v2.symmetrize()
-            print("symmetrizing 32A cluster")
-            sym.apply_point_group_symmetries_Q0(self.G4)
-        elif (self.cluster[0,0] == 2 and self.cluster[0,1] == 2 and self.cluster[1,0] == -2 and self.cluster[1,1] == 2):
-            import symmetrize_Nc8; sym=symmetrize_Nc8.symmetrize()
-            print("symmetrizing 8-site cluster")
-            sym.apply_point_group_symmetries_Q0(self.G4)
-    
     def reorder_G4(self):
         print "reorder G4",'\n'
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
@@ -397,7 +355,118 @@ class BSE:
 
         if self.vertex_channel=="PARTICLE_PARTICLE_UP_DOWN":
             print "Cluster inter-orbital Chi(q=0):", G4susQz0/(self.invT*self.Nc*4.0)
+            
+    def symmetrize_G4(self):
+        print "symmetrize G4",'\n'
+        # for iv=0; see Maier's note on symmetries of G4
+        if self.iwm==0:
+            print "Imposing symmetry in wn"
+            self.apply_symmetry_in_wn(self.G4r)
+
+           # 2021.12.13:
+           # Not sure why T.Maier's original code solveBSE_fromG4_multiOrbit_200622.py does not include below:
+           # To get the same lambda's as in some papers, may need comment out the following tempororily
+            if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
+                # print("G4.shape:",self.G4.shape)
+                print "Imposing transpose symmetry (for iv=0!)"
+                self.apply_transpose_symmetry()  
+                
+                # 2022.2.21:
+                # Maier's latest code solveBSE_fromG4_BiLayer_newFormat_220211.py comment this out
+                # See apply_ph_symmetry_pp below for details
+                if self.phSymmetry: self.apply_ph_symmetry_pp(self.G4)
+
+        # 16A cluster [[4,2],[0,4]]
+       # if (self.cluster[0,0] == 4.0 and self.cluster[0,1] == 2.0 and self.cluster[1,0] == 0.0 and self.cluster[1,1] == 4.0):
+       #     import symmetrize_Nc16A; sym=symmetrize_Nc16A.symmetrize()
+       #     print("symmetrizing 16A cluster")
+       #     sym.apply_point_group_symmetries_Q0(self.G4)
+       # elif (self.cluster[0,0] == 4 and self.cluster[0,1] == 0 and self.cluster[1,0] == 0 and self.cluster[1,1] == 4):
+       #     import symmetrize_Nc4x4; sym=symmetrize_Nc4x4.symmetrize()
+       #     print("symmetrizing 16B cluster")
+       #     sym.apply_point_group_symmetries_Q0(self.G4)
+       # elif (self.cluster[0,0] == 2 and self.cluster[0,1] == 2 and self.cluster[1,0] == -4 and self.cluster[1,1] == 2):
+       #     import symmetrize_Nc12; sym=symmetrize_Nc12.symmetrize()
+       #     print("symmetrizing 12A cluster")
+       #     sym.apply_point_group_symmetries_Q0(self.G4)
+       # elif (self.cluster[0,0] == 4 and self.cluster[0,1] == 4 and self.cluster[1,0] == 4 and self.cluster[1,1] == -4):
+       #     import symmetrize_Nc32A_v2; sym=symmetrize_Nc32A_v2.symmetrize()
+       #     print("symmetrizing 32A cluster")
+       #     sym.apply_point_group_symmetries_Q0(self.G4)
+       # elif (self.cluster[0,0] == 2 and self.cluster[0,1] == 2 and self.cluster[1,0] == -2 and self.cluster[1,1] == 2):
+       #     import symmetrize_Nc8; sym=symmetrize_Nc8.symmetrize()
+       #     print("symmetrizing 8-site cluster")
+       #     sym.apply_point_group_symmetries_Q0(self.G4)
     
+    ##############################################################
+    def apply_symmetry_in_wn(self,G4r):
+        # for G4[w1,K1,w2,K2]
+        # apply symmetry G4(K,wn,K',wn') = G4*(K,-wn,K',-wn')
+        # see 2-particle symmetries.pdf's final equation
+        # similar to apply_transpose_symmetry
+        # Be careful for multi-orbital case, where k=(K,iwn,b) with b index included
+        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
+        for l1 in range(nOrb):
+            for l2 in range(nOrb):
+                for l3 in range(nOrb):
+                    for l4 in range(nOrb):
+                        for iw1 in range(NwG4):
+                            for iw2 in range(NwG4):
+                                for iK1 in range(Nc):
+                                    for iK2 in range(Nc):
+                                        imw1 = NwG4-1-iw1
+                                        imw2 = NwG4-1-iw2
+                                        tmp1 = G4r[iw1,iK1, l1,l2,iw2,iK2, l3,l4]
+                                        tmp2 = G4r[imw1,iK1,l1,l2,imw2,iK2,l3,l4]
+                                        G4r[iw1,iK1, l1,l2,iw2,iK2, l3,l4] = 0.5*(tmp1+conj(tmp2))
+                                        G4r[imw1,iK1,l1,l2,imw2,iK2,l3,l4] = 0.5*(conj(tmp1)+tmp2)
+
+    def apply_transpose_symmetry(self):
+        # Apply symmetry Gamma(K,K') = Gamma(K',K)
+        # Be careful for multi-orbital case, where k=(K,iwn,b) with b index included
+        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
+        GP = 0.5*(self.G4M + self.G4M.transpose())
+        self.G4r = GP.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
+        self.G4M = GP
+        
+    def apply_ph_symmetry_pp(self,G4):
+        # G4pp(k,wn,k',wn') = G4pp(k+Q,wn,k'+Q,wn'), with Q=(pi,pi)
+        # 2022.2.21:
+        # From Maier's notes on symmetries of G4
+        # the simplied notation G4(K,K') = G4(K+Q,K'+Q) means that
+        # At (q,iv)=0, G4(-K,K,K',-K') = G4(-K-Q,K+Q,K'+Q,-K'-Q)
+        #
+        # so that PARTICLE_PARTICLE_UP_DOWN:
+        #
+        #       -K,l1          -K',l4         -K-Q,l1       -K'-Q,l4
+        #     -----<-------------<------    -----<-------------<------
+        #             |     |                         |     |
+        #             |  G4 |            =            |  G4 |
+        #     -----<-------------<------    -----<-------------<------
+        #        K,l3           K',l2          K+Q,l3        K'+Q,l2
+        #
+        # This is not necessarily correct for all Q
+        # only when ph_symmetry is satisfied? (probably at half-filling, Q=(pi,pi)
+        # is nesting wavevector so that here use Q=(pi,pi))
+        
+        Nc  = G4.shape[1]
+        nwn = G4.shape[0]
+        
+        for l1 in range(self.nOrb):
+            for l2 in range(self.nOrb):
+                for l3 in range(self.nOrb):
+                    for l4 in range(self.nOrb):
+                        for iw1 in range(nwn):
+                            for iw2 in range(nwn):
+                                for iK1 in range(Nc):
+                                    iK1q = self.iKSum[iK1,self.iKPiPi]
+                                    for iK2 in range(Nc):
+                                        iK2q = self.iKSum[iK2,self.iKPiPi]
+                                        tmp1 = G4[iw1,iK1, iw2,iK2,l1,l2,l3,l4]
+                                        tmp2 = G4[iw1,iK1q,iw2,iK2q,l1,l2,l3,l4]
+                                        G4[iw1,iK1, iw2,iK2,l1,l2,l3,l4]  = 0.5*(tmp1+tmp2)
+                                        G4[iw1,iK1q,iw2,iK2q,l1,l2,l3,l4] = 0.5*(tmp1+tmp2)
+
     ########################################################################
     def setupMomentumTables(self):
         # build tables for K+K' and K-K'
@@ -1713,82 +1782,6 @@ class BSE:
             tic.tick1On = tic.tick2On = False
         for tic in ax.yaxis.get_major_ticks():
             tic.tick1On = tic.tick2On = False
-
-    ##############################################################
-    def apply_symmetry_in_wn(self,G4):
-        # for G4[w1,K1,w2,K2]
-        # apply symmetry G4(wn,K,wn',K') = G4*(-wn,K,-wn',K')
-        # see 2-particle symmetries.pdf's final equation
-        Nc  = G4.shape[1]
-        nwn = G4.shape[0]
-        for l1 in range(self.nOrb):
-            for l2 in range(self.nOrb):
-                for l3 in range(self.nOrb):
-                    for l4 in range(self.nOrb):
-                        for iw1 in range(nwn):
-                            for iw2 in range(nwn):
-                                for iK1 in range(Nc):
-                                    for iK2 in range(Nc):
-                                        imw1 = nwn-1-iw1
-                                        imw2 = nwn-1-iw2
-                                        tmp1 = G4[iw1,iK1,iw2,iK2,l1,l2,l3,l4]
-                                        tmp2 = G4[imw1,iK1,imw2,iK2,l1,l2,l3,l4]
-                                        G4[iw1,iK1,iw2,iK2,l1,l2,l3,l4]   = 0.5*(tmp1+conj(tmp2))
-                                        G4[imw1,iK1,imw2,iK2,l1,l2,l3,l4] = 0.5*(conj(tmp1)+tmp2)
-
-    def apply_transpose_symmetry(self,G4):
-        # Apply symmetry Gamma(K,K') = Gamma(K',K)
-        Nc  = G4.shape[1]
-        nwn = G4.shape[0]
-        nt  = Nc*nwn
-        Gtmp = zeros((nwn,Nc,nwn,Nc))
-        
-        for l1 in range(self.nOrb):
-            for l2 in range(self.nOrb):
-                for l3 in range(self.nOrb):
-                    for l4 in range(self.nOrb):
-                        Gtmp = G4[:,:,:,:,l1,l2,l3,l4]
-                        GP = Gtmp.reshape(nt,nt)
-                        GP = 0.5*(GP + GP.transpose())
-                        G4[:,:,:,:,l1,l2,l3,l4] = GP.reshape(nwn,Nc,nwn,Nc)
-
-    def apply_ph_symmetry_pp(self,G4):
-        # G4pp(k,wn,k',wn') = G4pp(k+Q,wn,k'+Q,wn'), with Q=(pi,pi)
-        # 2022.2.21:
-        # From Maier's notes on symmetries of G4
-        # the simplied notation G4(K,K') = G4(K+Q,K'+Q) means that
-        # At (q,iv)=0, G4(-K,K,K',-K') = G4(-K-Q,K+Q,K'+Q,-K'-Q)
-        #
-        # so that PARTICLE_PARTICLE_UP_DOWN:
-        #
-        #       -K,l1          -K',l4         -K-Q,l1       -K'-Q,l4
-        #     -----<-------------<------    -----<-------------<------
-        #             |     |                         |     |
-        #             |  G4 |            =            |  G4 |
-        #     -----<-------------<------    -----<-------------<------
-        #        K,l3           K',l2          K+Q,l3        K'+Q,l2
-        #
-        # This is not necessarily correct for all Q
-        # only when ph_symmetry is satisfied? (probably at half-filling, Q=(pi,pi)
-        # is nesting wavevector so that here use Q=(pi,pi))
-        
-        Nc  = G4.shape[1]
-        nwn = G4.shape[0]
-        
-        for l1 in range(self.nOrb):
-            for l2 in range(self.nOrb):
-                for l3 in range(self.nOrb):
-                    for l4 in range(self.nOrb):
-                        for iw1 in range(nwn):
-                            for iw2 in range(nwn):
-                                for iK1 in range(Nc):
-                                    iK1q = self.iKSum[iK1,self.iKPiPi]
-                                    for iK2 in range(Nc):
-                                        iK2q = self.iKSum[iK2,self.iKPiPi]
-                                        tmp1 = G4[iw1,iK1, iw2,iK2,l1,l2,l3,l4]
-                                        tmp2 = G4[iw1,iK1q,iw2,iK2q,l1,l2,l3,l4]
-                                        G4[iw1,iK1, iw2,iK2,l1,l2,l3,l4]  = 0.5*(tmp1+tmp2)
-                                        G4[iw1,iK1q,iw2,iK2q,l1,l2,l3,l4] = 0.5*(tmp1+tmp2)
 
                                         
 ###################################################################################
