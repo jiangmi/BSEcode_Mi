@@ -961,8 +961,7 @@ class BSE:
         
         print "Leading 16 eigenvalues of BSE (no symmetrization)",'\n'
         for i in range(16):
-            if abs(imag(self.lambdas[i]))<1.e06:
-                print real(self.lambdas[i])
+            print real(self.lambdas[i])
                 
         print '\n',"Leading 16 eigenvalues of BSE (no symmetrization)",self.lambdas[0:16]
 
@@ -988,7 +987,9 @@ class BSE:
             self.lambdas2 = w2[ilead2]
             self.evecs2 = v2[:,ilead2]
             self.evecs2 = self.evecs2.reshape(NwG4,Nc,nOrb,nOrb,nt)
-            print '\n', "Leading 16 eigenvalues of BSE (sqrt(chi)*Gamma*sqrt(chi))",self.lambdas2[0:16]
+            print '\n', "Leading 16 eigenvalues of BSE (sqrt(chi)*Gamma*sqrt(chi))",'\n'
+            for i in range(16):
+                print self.lambdas2[i]
 
             w3,v3 = linalg.eig(self.pm3)
             wt3 = abs(w3-1)
@@ -996,7 +997,9 @@ class BSE:
             self.lambdas3 = w3[ilead3]
             self.evecs3 = v3[:,ilead3]
             self.evecs3 = self.evecs3.reshape(NwG4,Nc,nOrb,nOrb,nt)
-            print '\n', "Leading 16 eigenvalues of BSE (Peizhi Mai's PRB 103, 144514 (2021) Eq.(8))",self.lambdas3[0:16]
+            print '\n', "Leading 16 eigenvalues of BSE (Peizhi Mai's PRB 103, 144514 (2021) Eq.(8))",'\n'
+            for i in range(16):
+                print self.lambdas3[i]
             
             w4,v4 = linalg.eig(self.pm4)
             wt4 = abs(w4-1)
@@ -1004,18 +1007,20 @@ class BSE:
             self.lambdas4 = w4[ilead4]
             self.evecs4 = v4[:,ilead4]
             self.evecs4 = self.evecs4.reshape(NwG4,Nc,nOrb,nOrb,nt)
-            print '\n', "Leading 16 eigenvalues of BSE (Maier's buildSymmetricKernelMatrix)",self.lambdas4[0:16]
+            print '\n', "Leading 16 eigenvalues of BSE (Maier's buildSymmetricKernelMatrix)",'\n'
+            for i in range(16):
+                print self.lambdas4[i]
             
     def AnalyzeEigvec(self):
         # only concerned about Cu-Cu eigenvalue by setting orb index to be 0
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb
 
-        print '\n', "Analyze eigenval and eigvec (no symmetrization):",'\n'
-        self.AnalyzeEigvec_execute(self.evecs, self.lambdas, 'BSE (no symmetrization)')         
-
         if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
                                    "PARTICLE_PARTICLE_UP_DOWN",\
                                    "PARTICLE_PARTICLE_SINGLET"):
+            print '\n', "Analyze eigenval and eigvec (no symmetrization):",'\n'
+            self.AnalyzeEigvec_execute(self.evecs, self.lambdas, 'BSE (no symmetrization)')
+        
             print '\n', "Analyze eigvec for BSE (sqrt(chi)*Gamma*sqrt(chi)):"
             self.AnalyzeEigvec_execute(self.evecs2, self.lambdas2, 'BSE (sqrt(chi)*Gamma*sqrt(chi))')
             
@@ -1046,7 +1051,7 @@ class BSE:
         for io in range(nOrb):
             print '================='
             print 'orb ',io
-            for inr in range(16):
+            for inr in range(10):
                 imax = argmax(self.evecs[iw0,:,io,io,inr])
 
                 if (abs(self.evecs[iw0-1,imax,io,io,inr]-self.evecs[iw0,imax,io,io,inr]) <= 1.0e-1):
@@ -1062,7 +1067,7 @@ class BSE:
             print 'For d-wave'
             self.found_d=False
             self.ind_d=0
-            for ia in range(16):
+            for ia in range(10):
                 # first term check if Phi has d-wave in k space; 2nd term check if even frequency:
                 r1 = dot(gk,evecs[int(NwG4/2),:,io,io,ia]) * sum(evecs[:,self.iKPi0,io,io,ia])
                 if abs(r1) >= 2.0e-1: 
@@ -1115,7 +1120,7 @@ class BSE:
             gk = cos(self.Kvecs[:,0]) + cos(self.Kvecs[:,1]) # sxwave form factor
             self.found_d =False
             self.ind_d   =0
-            for ia in range(16):
+            for ia in range(10):
                 r1 = dot(gk,evecs[int(self.NwG4/2),:,io,io,ia]) * sum(evecs[:,self.iKPi0,io,io,ia])
                 if abs(r1) >= 2.0e-1: 
                     self.lambdad = lambdas[ia]
