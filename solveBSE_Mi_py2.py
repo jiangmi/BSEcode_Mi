@@ -25,7 +25,7 @@ from matplotlib.pyplot import *
 import matplotlib as mpll
 
 class BSE:
-    def __init__(self,model,Tval,fileG4,fileG,file_analysis_hdf5,draw,useG0,symmetrizeG4,phSymmetry,calcRedVertex,calcCluster,useGamma_hdf5,nkfine,compare_with_analysishdf5,write_data_file):
+    def __init__(self,model,Tval,fileG4,fileG,file_analysis_hdf5,draw,useG0,symmetrizeG4,phSymmetry,calcRedVertex,calcCluster,build_sym_kernel,useGamma_hdf5,nkfine,compare_with_analysishdf5,write_data_file):
         self.vertex_channels = ["PARTICLE_PARTICLE_UP_DOWN",          \
                                 "PARTICLE_HOLE_CHARGE",               \
                                 "PARTICLE_HOLE_MAGNETIC",             \
@@ -42,6 +42,7 @@ class BSE:
         self.calcCluster = calcCluster
         self.calcRedVertex = calcRedVertex
         self.phSymmetry = phSymmetry
+        self.build_sym_kernel = build_sym_kernel
         self.useGamma_hdf5 = useGamma_hdf5
         self.compareHDF5 = compare_with_analysishdf5
         self.write_data_file = write_data_file
@@ -902,7 +903,7 @@ class BSE:
         
         if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
                                    "PARTICLE_PARTICLE_UP_DOWN",\
-                                   "PARTICLE_PARTICLE_SINGLET"):
+                                   "PARTICLE_PARTICLE_SINGLET") and self.build_sym_kernel==True:
             # 1. one way to symmetrize the pairing kernel (note that abs might be wrong, but otherwise NaN error)
             self.pm2 = np.dot(sqrt(abs(real(self.chiM))),np.dot(real(self.GammaM), sqrt(abs(real(self.chiM)))))
             self.pm2 *= 1.0/(self.invT*float(self.Nc))
@@ -980,7 +981,7 @@ class BSE:
         
         if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
                                    "PARTICLE_PARTICLE_UP_DOWN",\
-                                   "PARTICLE_PARTICLE_SINGLET"):
+                                   "PARTICLE_PARTICLE_SINGLET") and self.build_sym_kernel==True:
             w2,v2 = linalg.eig(self.pm2)
             wt2 = abs(w2-1)
             ilead2 = argsort(wt2)
@@ -1017,7 +1018,7 @@ class BSE:
 
         if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
                                    "PARTICLE_PARTICLE_UP_DOWN",\
-                                   "PARTICLE_PARTICLE_SINGLET"):
+                                   "PARTICLE_PARTICLE_SINGLET") and self.build_sym_kernel==True:
             print '\n', "Analyze eigenval and eigvec (no symmetrization):",'\n'
             self.AnalyzeEigvec_execute(self.evecs, self.lambdas, 'BSE (no symmetrization)')
         
@@ -1558,29 +1559,6 @@ class BSE:
             
     def dwave(self,kx,ky):
         return cos(kx)-cos(ky)
-
-        #if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
-        #    w2,v2 = linalg.eigh(self.pm2)
-
-        #    wt2 = abs(w2-1)
-        #    ilead2 = argsort(wt2)
-        #    self.lambdas2 = w2[ilead2]
-        #    self.evecs2 = v2[:,ilead2]
-        #    self.evecs2 = self.evecs2.reshape(NwG4,Nc,nOrb,nOrb,nt)
-        #    print ("10 leading eigenvalues of symmetrized Bethe-salpeter equation",self.lambdas2[0:10])
-
-            #Now find d-wave eigenvalue
-        #    gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
-        #    self.found_d=False
-        #    for ia in range(0,10):
-        #        r1 = dot(gk,self.evecs[int(self.NwG4/2),:,0,0,ia]) * sum(self.evecs[:,2,0,0,ia])
-        #        if abs(r1) >= 2.0e-1: 
-        #            self.lambdad = self.lambdas[ia]
-        #            self.ind_d = ia
-        #            self.found_d=True
-        #            break
-        #    if self.found_d: print("d-wave eigenvalue",self.lambdad)
-
         
     def calcPdFromEigenFull(self,ia=0):
         gk = self.dwave(self.Kvecs[:,0],self.Kvecs[:,1])
@@ -1793,7 +1771,7 @@ for T_ind, T in enumerate(Ts):
     for v in Nv:
         for q in qs:
             #file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
-            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_'+str(v)+'.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_q'+str(q)+'.hdf5'
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
             file_analysis_hdf5 = './T='+str(Ts[T_ind])+'/analysis.hdf5'
@@ -1813,6 +1791,7 @@ for T_ind, T in enumerate(Ts):
                     phSymmetry=False,\
                     calcRedVertex=True,\
                     calcCluster=False,\
+                    build_sym_kernel=False,\
                     useGamma_hdf5=False,\
                     nkfine=100,\
                     compare_with_analysishdf5=False,\
