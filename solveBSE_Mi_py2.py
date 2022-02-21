@@ -1072,7 +1072,7 @@ class BSE:
             print 'For d-wave'
             self.found_d=False
             self.ind_d=0
-            for ia in range(nt):
+            for ia in range(16):
                 # first term check if Phi has d-wave in k space; 2nd term check if even frequency:
                 r1 = dot(gk,evecs[int(NwG4/2),:,io,io,ia]) * sum(evecs[:,self.iKPi0,io,io,ia])
                 if abs(r1) >= 2.0e-1: 
@@ -1125,7 +1125,7 @@ class BSE:
             gk = cos(self.Kvecs[:,0]) + cos(self.Kvecs[:,1]) # sxwave form factor
             self.found_d =False
             self.ind_d   =0
-            for ia in range(nt):
+            for ia in range(16):
                 r1 = dot(gk,evecs[int(self.NwG4/2),:,io,io,ia]) * sum(evecs[:,self.iKPi0,io,io,ia])
                 if abs(r1) >= 2.0e-1: 
                     self.lambdad = lambdas[ia]
