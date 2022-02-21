@@ -82,7 +82,8 @@ class BSE:
         if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
             self.calcPsCluster()      # s-wave
             self.calcSCClusterSus()   # es- and d-wave
-            self.calcPairSus_bilayer()
+            if model=='bilayer':            
+                self.calcPairSus_bilayer()
             if calcCluster == False: self.calcLatticeSCSus()
         else:
             self.calcClusterSus()
@@ -321,18 +322,23 @@ class BSE:
  
     def symmetrize_G4(self):
         print "symmetrize G4",'\n'
+        # for iv=0; see Maier's note on symmetries of G4
         if self.iwm==0:
             print "Imposing symmetry in wn"
             self.apply_symmetry_in_wn(self.G4)
 
-       # 2021.12.13:
-       # Not sure why T.Maier's original code solveBSE_fromG4_multiOrbit_200622.py does not include below:
-       # To get the same lambda's, comment these out tempororily
-       # if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
-       #     # print("G4.shape:",self.G4.shape)
-       #     print "Imposing transpose symmetry"
-       #     self.apply_transpose_symmetry(self.G4)
-       #     if self.phSymmetry: self.apply_ph_symmetry_pp(self.G4)
+           # 2021.12.13:
+           # Not sure why T.Maier's original code solveBSE_fromG4_multiOrbit_200622.py does not include below:
+           # To get the same lambda's as in some papers, may need comment out the following tempororily
+            if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
+                # print("G4.shape:",self.G4.shape)
+                print "Imposing transpose symmetry (for iv=0!)"
+                self.apply_transpose_symmetry(self.G4)  
+                
+                # 2022.2.21:
+                # Maier's latest code solveBSE_fromG4_BiLayer_newFormat_220211.py comment this out
+                # See apply_ph_symmetry_pp below for details
+                if self.phSymmetry: self.apply_ph_symmetry_pp(self.G4)
 
         # 16A cluster [[4,2],[0,4]]
         if (self.cluster[0,0] == 4.0 and self.cluster[0,1] == 2.0 and self.cluster[1,0] == 0.0 and self.cluster[1,1] == 4.0):
@@ -914,9 +920,9 @@ class BSE:
                     print ii, datafile[ii,0], real(self.lambdas[ii])
                             
         
-        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING"):#,\
-    #                               "PARTICLE_PARTICLE_UP_DOWN",\
-    #                               "PARTICLE_PARTICLE_SINGLET"):
+        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
+                                   "PARTICLE_PARTICLE_UP_DOWN",\
+                                   "PARTICLE_PARTICLE_SINGLET"):
             w2,v2 = linalg.eig(self.pm2)
             wt2 = abs(w2-1)
             ilead2 = argsort(wt2)
@@ -948,9 +954,9 @@ class BSE:
         print '\n', "Analyze eigenval and eigvec (no symmetrization):",'\n'
         self.AnalyzeEigvec_execute(self.evecs, self.lambdas, 'BSE (no symmetrization)')         
 
-        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING"):#,\
-     #                              "PARTICLE_PARTICLE_UP_DOWN",\
-     #                              "PARTICLE_PARTICLE_SINGLET"):
+        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING",\
+                                   "PARTICLE_PARTICLE_UP_DOWN",\
+                                   "PARTICLE_PARTICLE_SINGLET"):
             print '\n', "Analyze eigvec for BSE (sqrt(chi)*Gamma*sqrt(chi)):"
             self.AnalyzeEigvec_execute(self.evecs2, self.lambdas2, 'BSE (sqrt(chi)*Gamma*sqrt(chi))')
             
@@ -1747,7 +1753,25 @@ class BSE:
                         G4[:,:,:,:,l1,l2,l3,l4] = GP.reshape(nwn,Nc,nwn,Nc)
 
     def apply_ph_symmetry_pp(self,G4):
-        # G4pp(k,wn,k',wn') = G4pp(k+Q,wn,k'+Q,wn')
+        # G4pp(k,wn,k',wn') = G4pp(k+Q,wn,k'+Q,wn'), with Q=(pi,pi)
+        # 2022.2.21:
+        # From Maier's notes on symmetries of G4
+        # the simplied notation G4(K,K') = G4(K+Q,K'+Q) means that
+        # At (q,iv)=0, G4(-K,K,K',-K') = G4(-K-Q,K+Q,K'+Q,-K'-Q)
+        #
+        # so that PARTICLE_PARTICLE_UP_DOWN:
+        #
+        #       -K,l1          -K',l4         -K-Q,l1       -K'-Q,l4
+        #     -----<-------------<------    -----<-------------<------
+        #             |     |                         |     |
+        #             |  G4 |            =            |  G4 |
+        #     -----<-------------<------    -----<-------------<------
+        #        K,l3           K',l2          K+Q,l3        K'+Q,l2
+        #
+        # This is not necessarily correct for all Q
+        # only when ph_symmetry is satisfied? (probably at half-filling, Q=(pi,pi)
+        # is nesting wavevector so that here use Q=(pi,pi))
+        
         Nc  = G4.shape[1]
         nwn = G4.shape[0]
         
@@ -1768,7 +1792,7 @@ class BSE:
 
                                         
 ###################################################################################
-Ts = [1, 0.75, 0.5, 0.4, 0.3, 0.25,  0.2, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
+Ts = [1, 0.75, 0.5, 0.44, 0.4, 0.34, 0.3, 0.25, 0.24, 0.2, 0.17, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
 #Ts = [0.15]
 channels = ['phcharge','phmag']
 channels = ['phmag']
@@ -1782,18 +1806,15 @@ for T_ind, T in enumerate(Ts):
         for q in qs:
             #file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_'+str(v)+'.hdf5'
-            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_sc.hdf5'
-            #file_tp = './sc/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
-            #file_tp = './Nc4/T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
             file_analysis_hdf5 = './T='+str(Ts[T_ind])+'/analysis.hdf5'
-            #file_analysis_hdf5 = './Nc4/T='+str(Ts[T_ind])+'/analysis.hdf5'
 
             if(os.path.exists(file_tp)):
                 print "\n =================================\n"
                 print "T =", T
                 # model='square','bilayer','Emery'
-                BSE('bilayer',\
+                BSE('square',\
                     Ts[T_ind],\
                     file_tp,\
                     file_sp,\
@@ -1801,7 +1822,7 @@ for T_ind, T in enumerate(Ts):
                     draw=False,\
                     useG0=False,\
                     symmetrizeG4=True,\
-                    phSymmetry=True,\
+                    phSymmetry=False,\
                     calcRedVertex=True,\
                     calcCluster=False,\
                     useGamma_hdf5=False,\
