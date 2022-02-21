@@ -1532,10 +1532,10 @@ class BSE:
         G2t0b12 = sum(sum(G2band12,axis=0),axis=1)
         Pd_b12 = dot(gkd,dot(G2t0b12,gkd))/(float(self.Nc)*self.invT)
 
-        print "spm   susceptibility: ", real(Ps)*2.
-        print "dwave susceptibility for intra-band 1:  ", real(Pd_b1)#/norm
-        print "dwave susceptibility for intra-band 2:  ", real(Pd_b2)#/norm
-        print "dwave susceptibility for inter-band 12: ", real(Pd_b12)#/norm
+        print "spm   susceptibility: ", self.Tval, '  ', real(Ps)*2.
+        print "dwave susceptibility for intra-band 1:  ", self.Tval, '  ', real(Pd_b1)#/norm
+        print "dwave susceptibility for intra-band 2:  ", self.Tval, '  ', real(Pd_b2)#/norm
+        print "dwave susceptibility for inter-band 12: ", self.Tval, '  ', real(Pd_b12)#/norm
 
     def determine_specialK(self):
         self.iKPiPi = 0
