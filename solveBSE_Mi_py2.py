@@ -70,7 +70,6 @@ class BSE:
         self.calcGamma_d()
         if calcCluster == False: self.buildChi0Lattice(nkfine)
         self.buildKernelMatrix()
-        self.buildSymmetricKernelMatrix()
         self.calcKernelEigenValues()      
         self.AnalyzeEigvec()
         if self.draw: self.plotLeadingSolutions(self.Kvecs,self.lambdas,self.evecs[:,:,0,0,:],"Cu-Cu")
@@ -922,6 +921,17 @@ class BSE:
             self.pm3 =  np.dot(self.chiMasqrt,np.dot(self.GammaM, self.chiMasqrt))
             self.pm3 *= 1.0/(self.invT*float(self.Nc))
 
+            # 3. Build symmetric kernel matrix M = 0.5*(Gamma(wn,wn')*chi0(wn')+Gamma(wn,-wn')*chi0(-wn')
+            GammaTemp = self.Gamma.reshape(NwG4, Nc*nOrb*nOrb, NwG4, Nc*nOrb*nOrb)
+            Gamma2 = np.zeros_like(GammaTemp)
+            for iw1 in range(self.NwG4):
+                for iw2 in range(self.NwG4):
+                    Gamma2[iw1,:,iw2,:] = GammaTemp[iw1,:,self.NwG4-iw2-1]
+            Gamma2 = Gamma2.reshape(NwG4*Nc*nOrb*nOrb, NwG4*Nc*nOrb*nOrb)
+            self.pm4 = 0.5*(np.dot(self.GammaM, self.chiM) + np.dot(Gamma2,conj(self.chiM)))
+            # self.pm *= 1.0/(self.invT*float(self.Nc)*float(self.nOrb))
+            self.pm4 *= 1.0/(self.invT*float(self.Nc))
+            
             #self.pm2m = self.pm2.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
 
             #pm2m1 = self.pm2m.copy()
@@ -939,26 +949,6 @@ class BSE:
             #Gamma1 = self.Gamma.copy()
             #for iw1 in range(NwG4):
             #    self.Gamma[iw1,:,:,:,:,:,:,:]=(Gamma1[iw1,:,:,:,:,:,:,:]+Gamma1[NwG4-iw1-1,:,:,:,:,:,:,:])/2
-
-    def buildSymmetricKernelMatrix(self):
-        print " Build symmetric kernel matrix M = 0.5*(Gamma(wn,wn')*chi0(wn')+Gamma(wn,-wn')*chi0(-wn')",'\n'
-
-        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nt = self.nt; nOrb = self.nOrb
-
-        if (self.calcCluster):
-            self.chiM = self.chic0M
-        else:
-            self.chiM = self.chi0M
-
-        GammaTemp = self.Gamma.reshape(NwG4, Nc*nOrb*nOrb, NwG4, Nc*nOrb*nOrb)
-        Gamma2 = np.zeros_like(GammaTemp)
-        for iw1 in range(self.NwG4):
-            for iw2 in range(self.NwG4):
-                Gamma2[iw1,:,iw2,:] = GammaTemp[iw1,:,self.NwG4-iw2-1]
-        Gamma2 = Gamma2.reshape(NwG4*Nc*nOrb*nOrb, NwG4*Nc*nOrb*nOrb)
-        self.pm4 = 0.5*(np.dot(self.GammaM, self.chiM) + np.dot(Gamma2,conj(self.chiM)))
-        # self.pm *= 1.0/(self.invT*float(self.Nc)*float(self.nOrb))
-        self.pm4 *= 1.0/(self.invT*float(self.Nc))
 
     def calcKernelEigenValues(self):
         nt = self.nt; Nc = self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
