@@ -1533,7 +1533,8 @@ class BSE:
         G2t0b12 = sum(sum(G2band12,axis=0),axis=1)
         Pd_b12 = dot(gkd,dot(G2t0b12,gkd))/(float(self.Nc)*self.invT)
 
-        print "spm   susceptibility: ", self.Tval, '  ', real(Ps)*2.
+        # *2 to agree with Maier's 2011 PRB, which probably comes from the 0.25* factor above over multiplication
+        print "spm   susceptibility: ", self.Tval, '  ', real(Ps)*2.  
         print "dwave susceptibility for intra-band 1:  ", self.Tval, '  ', real(Pd_b1)#/norm
         print "dwave susceptibility for intra-band 2:  ", self.Tval, '  ', real(Pd_b2)#/norm
         print "dwave susceptibility for inter-band 12: ", self.Tval, '  ', real(Pd_b12)#/norm
