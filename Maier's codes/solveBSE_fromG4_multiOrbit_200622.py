@@ -133,6 +133,8 @@ class BSE:
         print"t2-prime = ",self.t2p
         self.tperp = array(f['parameters']['bilayer-Hubbard-model']['t-perp'])[0]
         print"tperp = ",self.tperp
+        self.tperpp = array(f['parameters']['bilayer-Hubbard-model']['t-perp-prime'])[0]
+        print"tperp-prime = ",self.tperpp
         self.V = array(f['parameters']['bilayer-Hubbard-model']['V'])[0]
         print"V = ",self.V
         self.Vp = array(f['parameters']['bilayer-Hubbard-model']['V-prime'])[0]
@@ -903,9 +905,9 @@ class BSE:
 
     def dispersion(self,kx,ky):
         ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
-        r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) - 4.0*self.t1p*cos(kx)*cos(ky)
-        r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) - 4.0*self.t2p*cos(kx)*cos(ky)
-        r12  = -self.tperp
+        r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) + 4.0*self.t1p*cos(kx)*cos(ky)
+        r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) + 4.0*self.t2p*cos(kx)*cos(ky)
+        r12  = -self.tperp -2.*self.tperpp*(cos(kx)+cos(ky))
 
         ek[0,0] = r11
         ek[1,1] = r22
