@@ -46,6 +46,7 @@ class BSE:
         self.useGamma_hdf5 = useGamma_hdf5
         self.compareHDF5 = compare_with_analysishdf5
         self.write_data_file = write_data_file
+        self.symmetrizeG4 = symmetrizeG4
         
         self.readData()
         self.setupMomentumTables()
@@ -56,7 +57,7 @@ class BSE:
         #self.calcPS()
         
         self.reorder_G4()
-        if symmetrizeG4: self.symmetrize_G4()
+        if self.symmetrizeG4: self.symmetrize_G4()
         
         self.setupMomentumTables()
         self.determine_specialK()
@@ -345,11 +346,8 @@ class BSE:
                                         elif self.vertex_channel=="PARTICLE_PARTICLE_UP_DOWN":                                 
                                             c1 = self.G4[iw2,ik2,iw1,ik1,l4,l3,l2,l1]
                                             self.G4r[iw1,ik1,l1,l2,iw2,ik2,l3,l4] = c1                                         
-                                            if (l1!=l2) & (l3!=l4):                                                            
+                                            if (l1!=l2) & (l3!=l4):  
                                                 G4susQz0 += c1  
-
-        G4rtemp = self.G4r.copy()
-        self.G4M = self.G4r.reshape(self.nt,self.nt)
 
         if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":
             print "Cluster Chi(q,qz=0) :", G4susQz0/(self.invT*self.Nc*2.0)
@@ -363,7 +361,7 @@ class BSE:
         # for iv=0; see Maier's note on symmetries of G4
         if self.iwm==0:
             print "Imposing symmetry in wn"
-            self.apply_symmetry_in_wn(self.G4r)
+            self.apply_symmetry_in_wn()
 
            # 2021.12.13:
            # Not sure why T.Maier's original code solveBSE_fromG4_multiOrbit_200622.py does not include below:
@@ -376,7 +374,7 @@ class BSE:
                 # 2022.2.21:
                 # Maier's latest code solveBSE_fromG4_BiLayer_newFormat_220211.py comment this out
                 # See apply_ph_symmetry_pp below for details
-                if self.phSymmetry: self.apply_ph_symmetry_pp(self.G4)
+                if self.phSymmetry: self.apply_ph_symmetry_pp()
 
         # 16A cluster [[4,2],[0,4]]
        # if (self.cluster[0,0] == 4.0 and self.cluster[0,1] == 2.0 and self.cluster[1,0] == 0.0 and self.cluster[1,1] == 4.0):
@@ -401,7 +399,7 @@ class BSE:
        #     sym.apply_point_group_symmetries_Q0(self.G4)
     
     ##############################################################
-    def apply_symmetry_in_wn(self,G4r):
+    def apply_symmetry_in_wn(self):
         # for G4[w1,K1,w2,K2]
         # apply symmetry G4(K,wn,K',wn') = G4*(K,-wn,K',-wn')
         # see 2-particle symmetries.pdf's final equation
@@ -418,20 +416,20 @@ class BSE:
                                     for iK2 in range(Nc):
                                         imw1 = NwG4-1-iw1
                                         imw2 = NwG4-1-iw2
-                                        tmp1 = G4r[iw1,iK1, l1,l2,iw2,iK2, l3,l4]
-                                        tmp2 = G4r[imw1,iK1,l1,l2,imw2,iK2,l3,l4]
-                                        G4r[iw1,iK1, l1,l2,iw2,iK2, l3,l4] = 0.5*(tmp1+conj(tmp2))
-                                        G4r[imw1,iK1,l1,l2,imw2,iK2,l3,l4] = 0.5*(conj(tmp1)+tmp2)
+                                        tmp1 = self.G4r[iw1,iK1, l1,l2,iw2,iK2, l3,l4]
+                                        tmp2 = self.G4r[imw1,iK1,l1,l2,imw2,iK2,l3,l4]
+                                        self.G4r[iw1,iK1, l1,l2,iw2,iK2, l3,l4] = 0.5*(tmp1+conj(tmp2))
+                                        self.G4r[imw1,iK1,l1,l2,imw2,iK2,l3,l4] = 0.5*(conj(tmp1)+tmp2)
 
     def apply_transpose_symmetry(self):
         # Apply symmetry Gamma(K,K') = Gamma(K',K)
         # Be careful for multi-orbital case, where k=(K,iwn,b) with b index included
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
-        GP = 0.5*(self.G4M + self.G4M.transpose())
+        G4Mtmp = self.G4r.reshape(self.nt,self.nt)
+        GP = 0.5*(G4Mtmp + G4Mtmp.transpose())
         self.G4r = GP.reshape(NwG4,Nc,nOrb,nOrb,NwG4,Nc,nOrb,nOrb)
-        self.G4M = GP
         
-    def apply_ph_symmetry_pp(self,G4):
+    def apply_ph_symmetry_pp(self):
         # G4pp(k,wn,k',wn') = G4pp(k+Q,wn,k'+Q,wn'), with Q=(pi,pi)
         # 2022.2.21:
         # From Maier's notes on symmetries of G4
@@ -451,23 +449,23 @@ class BSE:
         # only when ph_symmetry is satisfied? (probably at half-filling, Q=(pi,pi)
         # is nesting wavevector so that here use Q=(pi,pi))
         
-        Nc  = G4.shape[1]
-        nwn = G4.shape[0]
+        Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
         
-        for l1 in range(self.nOrb):
-            for l2 in range(self.nOrb):
-                for l3 in range(self.nOrb):
-                    for l4 in range(self.nOrb):
-                        for iw1 in range(nwn):
-                            for iw2 in range(nwn):
+        for l1 in range(nOrb):
+            for l2 in range(nOrb):
+                for l3 in range(nOrb):
+                    for l4 in range(nOrb):
+                        for iw1 in range(NwG4):
+                            for iw2 in range(NwG4):
                                 for iK1 in range(Nc):
                                     iK1q = self.iKSum[iK1,self.iKPiPi]
                                     for iK2 in range(Nc):
                                         iK2q = self.iKSum[iK2,self.iKPiPi]
-                                        tmp1 = G4[iw1,iK1, iw2,iK2,l1,l2,l3,l4]
-                                        tmp2 = G4[iw1,iK1q,iw2,iK2q,l1,l2,l3,l4]
-                                        G4[iw1,iK1, iw2,iK2,l1,l2,l3,l4]  = 0.5*(tmp1+tmp2)
-                                        G4[iw1,iK1q,iw2,iK2q,l1,l2,l3,l4] = 0.5*(tmp1+tmp2)
+                                        tmp1 = self.G4r[iw1,iK1, l1,l2, iw2,iK2,l3,l4]
+                                        tmp2 = self.G4r[iw1,iK1q,l1,l2, iw2,iK2q,l3,l4]
+                                        self.G4r[iw1,iK1, l1,l2,iw2,iK2,l3,l4]  = 0.5*(tmp1+tmp2)
+                                        self.G4r[iw1,iK1q,l1,l2,iw2,iK2q,l3,l4] = 0.5*(tmp1+tmp2)
+                                        
 
     ########################################################################
     def setupMomentumTables(self):
@@ -591,6 +589,7 @@ class BSE:
         #        self.GammaM[i,j] = c1
         #        self.GammaM[j,i] = c1
 
+        self.G4M = self.G4r.reshape(self.nt,self.nt)
         G4M = linalg.inv(self.G4M)
         chic0M = linalg.inv(self.chic0M)
         self.GammaM = chic0M - G4M
