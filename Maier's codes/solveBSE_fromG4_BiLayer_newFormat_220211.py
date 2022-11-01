@@ -13,8 +13,10 @@ import pandas as p
 # This currently only works for pp channel
 
 class BSE:
-    def __init__(self,fileG4,fileG="data.DCA_sp.hdf5",draw=False,useG0=False,symmetrize_G4=False,phSymmetry=False,nkfine=100,oldFormat=False,newMaster=True,allq=False,evenFreqOnly=True):
+    def __init__(self,Tval,file_tp,file_sp,draw=False,useG0=False,symmetrize_G4=False,phSymmetry=False,nkfine=100,oldFormat=False,newMaster=True,allq=False,evenFreqOnly=True):
 
+        self.Tval = Tval
+        
         self.fileG4 = fileG4
 
         self.fileG = fileG
@@ -2074,4 +2076,42 @@ class BSE:
     #                     G4[iw1,iw2,iK1q,iK2q] = 0.5*(tmp1+tmp2)
 
 
+    
+###################################################################################
+Ts = [1, 0.75, 0.5, 0.44, 0.4, 0.34, 0.3, 0.25, 0.24, 0.2, 0.17, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
+#Ts = [0.15]
+channels = ['phcharge','phmag']
+channels = ['phmag']
+qs = ['00','pi20','pi0','pipi2','pipi','pi2pi2']
+qs = ['pipi']
+Nv = [0]#,1,2,3,4,5,6,7,8]
 
+for T_ind, T in enumerate(Ts):
+    #for ch in channels:
+    for v in Nv:
+        for q in qs:
+            #file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_q'+str(q)+'.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
+            file_analysis_hdf5 = './T='+str(Ts[T_ind])+'/analysis.hdf5'
+
+            if(os.path.exists(file_tp)):
+                print "\n =================================\n"
+                print "T =", T
+                # model='square','bilayer','Emery'
+                BSE('bilayer',\
+                    Ts[T_ind],\
+                    file_tp,\
+                    file_sp,\
+                    file_analysis_hdf5,\
+                    draw=False,\
+                    useG0=False,\
+                    symmetrizeG4=True,\
+                    phSymmetry=False,\
+                    nkfine=100,\
+                    oldFormat=False,\
+                    newMaster=True,\
+                    allq=False,\
+                    evenFreqOnly=True)
+                
