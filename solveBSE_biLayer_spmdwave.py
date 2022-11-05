@@ -899,13 +899,15 @@ class BSE:
                 os.remove(fname)
         
             # (kx,ky,kz,wn, evec at qz=0, evec at qz=pi)
-            for iNc in range(Nc):
-                kx = self.K[iNc,0]; ky = self.K[iNc,1]; kz = self.K[iNc,2]
-                kxs = np.full((NwG4, 1), kx)
-                kys = np.full((NwG4, 1), ky)
-                kzs = np.full((NwG4, 1), kz)
-                
-                self.write_data_6cols(fname, kxs,kys,kzs, self.wnSet, self.evecs[:,iNc,0,0], self.evecs[:,iNc,0,1])
+            # print first two leading Evec to include cases with two degenerate Eval for d+is wave
+            for ilam in range(0,2):
+                for iNc in range(Nc):
+                    kx = self.K[iNc,0]; ky = self.K[iNc,1]; kz = self.K[iNc,2]
+                    kxs = np.full((NwG4, 1), kx)
+                    kys = np.full((NwG4, 1), ky)
+                    kzs = np.full((NwG4, 1), kz)
+
+                    self.write_data_6cols(fname, kxs,kys,kzs, self.wnSet, self.evecs[:,iNc,ilam,0], self.evecs[:,iNc,ilam,1])
 
 
 
