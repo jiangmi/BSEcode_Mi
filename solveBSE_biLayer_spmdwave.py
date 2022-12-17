@@ -907,10 +907,58 @@ class BSE:
                     kys = np.full((NwG4, 1), ky)
                     kzs = np.full((NwG4, 1), kz)
 
-                    self.write_data_6cols(fname, kxs,kys,kzs, self.wnSet, self.evecs[:,iNc,ilam,0], self.evecs[:,iNc,ilam,1])
+                    self.write_data_6cols(fname, kxs,kys,kzs, \
+                                          self.wnSet, self.evecs[:,iNc,ilam,0], self.evecs[:,iNc,ilam,1])
+
+                    
+        #Now find d-wave eigenvalue of BSE (based on g(k) in band kz=0)
+
+        gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
+
+        self.found_d=False
+
+        for ia in range(0,16):
+
+            r1 = dot(gk,self.evecs[int(self.NwG4/2),0:int(Nc/2),ia,0])
+
+            if abs(r1) >= 0.2: 
+
+                self.lambdad = self.lambdas[ia,0]
+
+                self.ind_d = ia
+
+                self.found_d=True
+
+                break
+
+        if self.found_d: print("d-wave eigenvalue of BSE for qz=0", self.Tval, real(self.lambdad))
+
+        #self.evecs2 = self.evecs2.reshape(NwG4,16,2,nt)
 
 
+        #Now find d-wave eigenvalue of BSE (based on g(k) in band kz=pi)
 
+        self.found_d=False
+
+        for ia in range(0,16):
+
+            r1 = dot(gk,self.evecs[int(self.NwG4/2),0:int(Nc/2),ia,1])
+
+            if abs(r1) >= 0.2:
+
+                self.lambdad = self.lambdas[ia,1]
+
+                self.ind_d = ia
+
+                self.found_d=True
+
+                break
+
+        if self.found_d: print("d-wave eigenvalue of BSE for qz=pi", self.Tval, real(self.lambdad))
+
+
+                    
+        ###############################################################################################
         if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
             
             self.lambdas2 = zeros((16,2),dtype='complex')
@@ -943,15 +991,18 @@ class BSE:
                     os.remove(fname)
             
                 # (kx,ky,kz,wn, evec at qz=0, evec at qz=pi)
-                for iNc in range(Nc):
-                    kx = self.K[iNc,0]; ky = self.K[iNc,1]; kz = self.K[iNc,2]
-                    kxs = np.full((NwG4, 1), kx)
-                    kys = np.full((NwG4, 1), ky)
-                    kzs = np.full((NwG4, 1), kz)
-                    self.write_data_6cols(fname, kxs,kys,kzs, self.wnSet, self.evecs2[:,iNc,0,0], self.evecs2[:,iNc,0,1])
+                # print first two leading Evec to include cases with two degenerate Eval for d+is wave
+                for ilam in range(0,2):
+                    for iNc in range(Nc):
+                        kx = self.K[iNc,0]; ky = self.K[iNc,1]; kz = self.K[iNc,2]
+                        kxs = np.full((NwG4, 1), kx)
+                        kys = np.full((NwG4, 1), ky)
+                        kzs = np.full((NwG4, 1), kz)
+                        self.write_data_6cols(fname, kxs,kys,kzs, \
+                                              self.wnSet, self.evecs2[:,iNc,ilam,0], self.evecs2[:,iNc,ilam,1])
                     
                     
-            #Now find d-wave eigenvalue (based on g(k) in band kz=0)
+            #Now find d-wave eigenvalue of symmetrized BSE (based on g(k) in band kz=0)
 
             gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
 
@@ -971,12 +1022,12 @@ class BSE:
 
                     break
 
-            if self.found_d: print("d-wave eigenvalue for qz=0", self.Tval, real(self.lambdad))
+            if self.found_d: print("d-wave eigenvalue of symmetrized BSE for qz=0", self.Tval, real(self.lambdad))
 
             #self.evecs2 = self.evecs2.reshape(NwG4,16,2,nt)
 
 
-            #Now find d-wave eigenvalue (based on g(k) in band kz=pi)
+            #Now find d-wave eigenvalue of symmetrized BSE (based on g(k) in band kz=pi)
 
             self.found_d=False
 
@@ -994,7 +1045,7 @@ class BSE:
 
                     break
 
-            if self.found_d: print("d-wave eigenvalue for qz=pi", self.Tval, real(self.lambdad))
+            if self.found_d: print("d-wave eigenvalue of symmetrized BSE for qz=pi", self.Tval, real(self.lambdad))
 
                 
     def buildChi0Lattice(self,nkfine):
@@ -1979,7 +2030,7 @@ class BSE:
     
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.44, 0.4, 0.34, 0.3, 0.25, 0.24, 0.2, 0.17, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
-Ts = [0.03]
+#Ts = [0.03]
 channels = ['phcharge','phmag']
 channels = ['phmag']
 qs = ['00','pi20','pi0','pipi2','pipi','pi2pi2']

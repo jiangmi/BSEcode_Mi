@@ -137,7 +137,12 @@ class BSE:
             print ("orbital occupancy:",self.orbital[self.orbital.shape[0]-1],'\n')
             print ("Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n')
             print ("Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n')
-        
+        elif self.model=='trilayer' or self.model=='sdsmodel':
+            print ("orbital occupancy:",self.orbital[self.orbital.shape[0]-1],'\n')
+            print ("Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n')
+            print ("Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n')       
+            print ("Layer3 filling =", self.orbital[self.orbital.shape[0]-1,0,2]+self.orbital[self.orbital.shape[0]-1,1,2],'\n')
+ 
         self.sigmaarray=array(f['DCA-loop-functions']['L2_Sigma_difference']['data'])
         print ("L2_Sigma_difference =", self.sigmaarray,'\n')
         # Now read the 4-point Green's function
@@ -281,9 +286,44 @@ class BSE:
             print ("t2-prime = ",self.t2p)
             self.tperp = array(f['parameters']['bilayer-Hubbard-model']['t-perp'])[0]
             print ("tperp = ",self.tperp)
+            self.tperp_p = array(f['parameters']['bilayer-Hubbard-model']['t-perp-prime'])[0]
+            print ("tperp_p = ",self.tperp_p)
             self.V = array(f['parameters']['bilayer-Hubbard-model']['V'])[0]
             print ("V = ",self.V)
             self.Vp = array(f['parameters']['bilayer-Hubbard-model']['V-prime'])[0]
+            print ("V-prime = ",self.Vp)
+        if model=='trilayer' or model=='sdsmodel':
+            self.e1 = array(f['parameters']['trilayer-Hubbard-model']['e1'])[0]
+            print ("e1 = ",self.e1)
+            self.e2 = array(f['parameters']['trilayer-Hubbard-model']['e2'])[0]
+            print ("e2 = ",self.e2)
+            self.e3 = array(f['parameters']['trilayer-Hubbard-model']['e3'])[0]
+            print ("e3 = ",self.e3)
+            self.U1 = array(f['parameters']['trilayer-Hubbard-model']['U1'])[0]
+            print ("U1 = ",self.U1)
+            self.U2 = array(f['parameters']['trilayer-Hubbard-model']['U2'])[0]
+            print ("U2 = ",self.U2)
+            self.U3 = array(f['parameters']['trilayer-Hubbard-model']['U3'])[0]
+            print ("U3 = ",self.U3)
+            self.t1 = array(f['parameters']['trilayer-Hubbard-model']['t1'])[0]
+            print ("t1 = ",self.t1)
+            self.t2 = array(f['parameters']['trilayer-Hubbard-model']['t2'])[0]
+            print ("t2 = ",self.t2)
+            self.t3 = array(f['parameters']['trilayer-Hubbard-model']['t3'])[0]
+            print ("t3 = ",self.t3)
+            self.t1p = array(f['parameters']['trilayer-Hubbard-model']['t1-prime'])[0]
+            print ("t1-prime = ",self.t1p)
+            self.t2p = array(f['parameters']['trilayer-Hubbard-model']['t2-prime'])[0]
+            print ("t2-prime = ",self.t2p)
+            self.t3p = array(f['parameters']['trilayer-Hubbard-model']['t3-prime'])[0]
+            print ("t3-prime = ",self.t3p)
+            self.tperp = array(f['parameters']['trilayer-Hubbard-model']['t-perp'])[0]
+            print ("tperp = ",self.tperp)
+            self.tperp_p = array(f['parameters']['trilayer-Hubbard-model']['t-perp-prime'])[0]
+            print ("tperp_p = ",self.tperp_p)
+            self.V = array(f['parameters']['trilayer-Hubbard-model']['V'])[0]
+            print ("V = ",self.V)
+            self.Vp = array(f['parameters']['trilayer-Hubbard-model']['V-prime'])[0]
             print ("V-prime = ",self.Vp)
         if model=='Emery':
             self.Udd = array(f['parameters']['threebands-Hubbard-model']['U_dd'])[0]
@@ -664,7 +704,7 @@ class BSE:
             if self.model=='square':
                 fname = 'Gamma_vs_iwm_T'+str(self.Tval)+'.txt'
                 self.write_data_2cols(fname, self.wnSet[NwG4_2:NwG4]-self.wnSet[NwG4_2], Gd[:,0])
-            elif self.model=='bilayer':
+            else:
                 for io in range(nOrb):
                     fname = 'Gamma_vs_iwm_T'+str(self.Tval)+'_orb'+str(io)+'.txt'
                     self.write_data_2cols(fname, self.wnSet[NwG4_2:NwG4]-self.wnSet[NwG4_2], Gd[:,io])
@@ -1187,37 +1227,16 @@ class BSE:
         print (" ")
         print ("Calculate cluster susceptibility via G4 summation:")
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
-        
-        if self.model=='square':
-            PS=0.0
-            for iw1 in range(NwG4):
-                for ik1 in range(Nc):
-                    for iw2 in range(NwG4):
-                        for ik2 in range(Nc):
-                            PS += self.G4r[iw1,ik1,0,0,iw2,ik2,0,0]
-
-            PS /= self.Nc*self.invT
-            print ("cluster susceptibility = ", self.Tval, ' ', real(PS))
-           
-        elif self.model=='bilayer': 
-            PS=0.0; PS11=0.0; PS22=0.0; PS12=0.0
-            for iw1 in range(NwG4):
-                for ik1 in range(Nc):
-                    for iw2 in range(NwG4):
-                        for ik2 in range(Nc):
-                            PS11 += self.G4r[iw1,ik1,0,0,iw2,ik2,0,0]
-                            PS22 += self.G4r[iw1,ik1,1,1,iw2,ik2,1,1]
-                            PS12 += self.G4r[iw1,ik1,0,0,iw2,ik2,1,1] + self.G4r[iw1,ik1,1,1,iw2,ik2,0,0]
-
-            PS11 /= self.Nc*self.invT
-            print ("cluster susceptibility for layer 1 = ",self.Tval, ' ', real(PS11))
-            #print("chi0kiw s-wave Pairfield susceptibility error2 for Cu-Cu is ",PSccerror2)
-            PS22 /= self.Nc*self.invT
-            print ("cluster susceptibility for layer 2 = ",self.Tval, ' ', real(PS22))
-            PS12 /= self.Nc*self.invT 
-            print ("clusterd susceptibility for between layer 1 and 2 = ", self.Tval, ' ', real(PS12))
-            PS = PS11+PS22+PS12
-            print ("cluster susceptibility = ",self.Tval, ' ',PS)                                            
+        chi_c = np.zeros((nOrb,nOrb),dtype='complex')
+            
+        for io1 in range(nOrb):
+            for io2 in range(nOrb):
+                chi_c[io1,io2] = sum(self.G4r[:,:,io1,io1,:,:,io2,io2])
+                chi_c[io1,io2] /= self.Nc*self.invT
+                
+                print ("cluster susceptibility for layer/orb ", io1, io2, ": T = ",self.Tval, ' ', real(chi_c[io1,io2]))
+                
+        print ("Total cluster susceptibility: T = ",self.Tval, ' ', sum(chi_c))                                            
     
     def calcPsCluster(self):
         '''
@@ -1227,36 +1246,18 @@ class BSE:
         print ("Calculate s-wave cluster pair-field susceptibility:")
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
         
-        if self.model=='square':
-            PS=0.0
-            for iw1 in range(NwG4):
-                for ik1 in range(Nc):
-                    for iw2 in range(NwG4):
-                        for ik2 in range(Nc):
-                            PS += self.G4r[iw1,ik1,0,0,iw2,ik2,0,0]
-
-            PS /= self.Nc*self.invT
-            print ("G4 s-wave cluster pair-field susceptibility is ",PS)
-           
-        elif self.model=='bilayer': 
-            PS=0.0; PS11=0.0; PS22=0.0; PS12=0.0
-            for iw1 in range(NwG4):
-                for ik1 in range(Nc):
-                    for iw2 in range(NwG4):
-                        for ik2 in range(Nc):
-                            PS11 += self.G4r[iw1,ik1,0,0,iw2,ik2,0,0]
-                            PS22 += self.G4r[iw1,ik1,1,1,iw2,ik2,1,1]
-                            PS12 += self.G4r[iw1,ik1,0,0,iw2,ik2,1,1] + self.G4r[iw1,ik1,1,1,iw2,ik2,0,0]
-
-            PS11 /= self.Nc*self.invT
-            print("G4 s-wave cluster Pairfield susceptibility for layer 1 is ",PS11)
-            #print("chi0kiw s-wave Pairfield susceptibility error2 for Cu-Cu is ",PSccerror2)
-            PS22 /= self.Nc*self.invT
-            print("G4 s-wave cluster Pairfield susceptibility for layer 2 is ",PS22)
-            PS12 /= self.Nc*self.invT 
-            print("G4 s-wave cluster Pairfield susceptibility for between layer 1 and 2 is ",PS12)
-            PS = PS11+PS22+PS12
-            print("G4 s-wave cluster Pairfield susceptibility is ",PS)                                                    
+        Ps = np.zeros((nOrb,nOrb),dtype='complex')
+            
+        for io1 in range(nOrb):
+            for io2 in range(nOrb):
+                Ps[io1,io2] = sum(self.G4r[:,:,io1,io1,:,:,io2,io2])
+                Ps[io1,io2] /= self.Nc*self.invT
+                
+                print ("G4 s-wave cluster pair-field susceptibility for layer/orb ", io1, io2, \
+                       ": T = ",self.Tval, ' ', real(Ps[io1,io2]))
+                
+        print ("Total G4 s-wave cluster pair-field susceptibility: T = ",self.Tval, ' ', sum(Ps))  
+                                            
         
         #PS=0.0; PScc=0.0; PSoxox=0.0; PSoyoy=0.0; PScox=0.0; PScoy=0.0; PSoxoy=0.0; testG4susQz0=0.0; testG4susQz1=0.0;ep=0.0;
         #for iw in range(0,1024):
@@ -1298,68 +1299,32 @@ class BSE:
         print (" ")
         gksx = cos(self.Kvecs[:,0]) + cos(self.Kvecs[:,1])
         gkd  = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1])
-        csum11 = 0.0; csum22 = 0.0; csum12 = 0.0; 
-        ccsum11 = 0.0; ccsum22 = 0.0; ccsum12 = 0.0
 
-        if self.model=='square':
-            for iK1 in range(self.Nc):
-                for iK2 in range(self.Nc):
-                    csum11 += gksx[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,0,0])*gksx[iK2]
-
-            csum11 /= self.Nc*self.invT
-            #self.Pdc = real(csum)
-            print ("G4 sx-wave cluster Pairfield susceptibility: ",csum11)
-
-            print (" ")
-            print (" ")
-            for iK1 in range(self.Nc):
-                for iK2 in range(self.Nc):
-                    ccsum11 += gkd[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,0,0])*gkd[iK2]
-
-            ccsum11 /= self.Nc*self.invT
-
-            #self.Pdc = real(csum)
-            print ("G4 d-wave cluster Pairfield susceptibility: ",ccsum11)
-                                                    
-        elif self.model=='bilayer': 
-            for iK1 in range(self.Nc):
-                for iK2 in range(self.Nc):
-                    csum11 += gksx[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,0,0])*gksx[iK2]
-                    csum22 += gksx[iK1]*sum(self.G4r[:,iK1,1,1,:,iK2,1,1])*gksx[iK2]
-                    csum12 += gksx[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,1,1])*gksx[iK2] \
-                            + gksx[iK1]*sum(self.G4r[:,iK1,1,1,:,iK2,0,0])*gksx[iK2]
-
-            csum11 /= self.Nc*self.invT
-            csum22 /= self.Nc*self.invT
-            csum12 /= self.Nc*self.invT
-            #self.Pdc = real(csum)
-            print ("G4 sx-wave 11 cluster Pairfield susceptibility: ",csum11)
-            print ("G4 sx-wave 22 cluster Pairfield susceptibility: ",csum22)
-            print ("G4 sx-wave 12 cluster Pairfield susceptibility: ",csum12)
-
-            print (" ")
-            print (" ")
-            G4spm = 0.25*(self.G4r[:,:,0,1,:,:,0,1]+self.G4r[:,:,0,1,:,:,1,0]+self.G4r[:,:,1,0,:,:,0,1]+self.G4r[:,:,1,0,:,:,1,0])
+        nOrb = self.nOrb       
+        Pspm = np.zeros((nOrb,nOrb),dtype='complex')
+        Pd   = np.zeros((nOrb,nOrb),dtype='complex')
+            
+        for io1 in range(nOrb):
+            for io2 in range(nOrb):
+                for iK1 in range(self.Nc):
+                    for iK2 in range(self.Nc):
+                        Pspm[io1,io2] += gksx[iK1]*sum(self.G4r[:,iK1,io1,io1,:,iK2,io2,io2])*gksx[iK2]
+                        Pd[io1,io2]   += gkd[iK1]*sum(self.G4r[:,iK1,io1,io1,:,iK2,io2,io2])*gkd[iK2]
+                
+                Pspm[io1,io2] /= self.Nc*self.invT
+                Pd[io1,io2]   /= self.Nc*self.invT
+                
+                print ("G4 sx-wave cluster pair-field susceptibility for layer/orb ", io1, io2, \
+                       ": T = ",self.Tval, ' ', real(Pspm[io1,io2]))
+                print ("G4 d-wave cluster pair-field susceptibility for layer/orb ", io1, io2, \
+                       ": T = ",self.Tval, ' ', real(Pd[io1,io2]))
+                
+                
+        if self.model=='bilayer': 
+            G4spm = 0.25*(self.G4r[:,:,0,1,:,:,0,1]+self.G4r[:,:,0,1,:,:,1,0] \
+                         +self.G4r[:,:,1,0,:,:,0,1]+self.G4r[:,:,1,0,:,:,1,0])
             Ps = sum(G4spm)/(float(self.Nc)*self.invT)
             print ("G4 spm cluster Pairfield susceptibility: ", real(Ps))
-
-            print (" ")
-            print (" ")
-            for iK1 in range(self.Nc):
-                for iK2 in range(self.Nc):
-                    ccsum11 += gkd[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,0,0])*gkd[iK2]
-                    ccsum22 += gkd[iK1]*sum(self.G4r[:,iK1,1,1,:,iK2,1,1])*gkd[iK2]
-                    ccsum12 += gkd[iK1]*sum(self.G4r[:,iK1,0,0,:,iK2,1,1])*gkd[iK2] \
-                             + gkd[iK1]*sum(self.G4r[:,iK1,1,1,:,iK2,0,0])*gkd[iK2]
-
-            ccsum11 /= self.Nc*self.invT
-            ccsum22 /= self.Nc*self.invT
-            ccsum12 /= self.Nc*self.invT
-
-            #self.Pdc = real(csum)
-            print ("G4 d-wave 11 cluster Pairfield susceptibility: ",ccsum11)
-            print ("G4 d-wave 22 cluster Pairfield susceptibility: ",ccsum22)
-            print ("G4 d-wave 12 cluster Pairfield susceptibility: ",ccsum12)
             
     
     ########################################################################
@@ -1661,16 +1626,37 @@ class BSE:
     def dispersion(self,kx,ky):
         if self.model=='square':
             ek  = -2.*self.t*(cos(kx)+cos(ky)) - 4.0*self.tp*cos(kx)*cos(ky) 
+
         elif self.model=='bilayer':            
             ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
             r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) - 4.0*self.t1p*cos(kx)*cos(ky)
             r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) - 4.0*self.t2p*cos(kx)*cos(ky)
-            r12  = -self.tperp
+            r12  = -self.tperp -2. * self.tperp_p * (cos(kx) + cos(ky))
+            ek[0,0] = r11; ek[1,1] = r22
+            ek[0,1] = r12; ek[1,0] = r12
 
-            ek[0,0] = r11
-            ek[1,1] = r22
-            ek[0,1] = r12
-            ek[1,0] = r12
+        elif self.model=='trilayer':
+            ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
+            r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) - 4.0*self.t1p*cos(kx)*cos(ky)
+            r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) - 4.0*self.t2p*cos(kx)*cos(ky)
+            r33  = self.e3 -2.*self.t3*(cos(kx)+cos(ky)) - 4.0*self.t3p*cos(kx)*cos(ky)
+            r12  = -self.tperp -2. * self.tperp_p * (cos(kx) + cos(ky))
+
+            ek[0,0] = r11; ek[1,1] = r22; ek[2,2] = r33
+            ek[0,1] = r12; ek[1,0] = r12
+            ek[1,2] = r12; ek[2,1] = r12
+
+        elif self.model=='sdsmodel':
+            ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
+            r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) - 4.0*self.t1p*cos(kx)*cos(ky)
+            r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) - 4.0*self.t2p*cos(kx)*cos(ky)
+            r33  = self.e3 -2.*self.t3*(cos(kx)+cos(ky)) - 4.0*self.t3p*cos(kx)*cos(ky)
+            r12  = -self.tperp -2. * self.tperp_p * (cos(kx) - cos(ky))
+
+            ek[0,0] = r11; ek[1,1] = r22; ek[2,2] = r33
+            ek[0,1] = r12; ek[1,0] = r12
+            ek[1,2] = r12; ek[2,1] = r12
+            
         return ek
 
     def selectFS(self,G4,FSpoints):
@@ -1775,8 +1761,8 @@ for T_ind, T in enumerate(Ts):
             if(os.path.exists(file_tp)):
                 print ("\n =================================\n")
                 print ("T =", T)
-                # model='square','bilayer','Emery'
-                BSE('bilayer',\
+                # model='square','bilayer','Emery','sdsmodel','trilayer'
+                BSE('sdsmodel',\
                     Ts[T_ind],\
                     file_tp,\
                     file_sp,\
