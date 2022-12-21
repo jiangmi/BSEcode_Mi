@@ -334,10 +334,10 @@ class BSE:
             print ("tpd = ",self.tpd)
             self.tpp = np.array(f['parameters']['threebands-Hubbard-model']['t_pp'])[0]
             print ("tpp = ",self.tpp)
-            self.ep_d = np.array(f['parameters']['threebands-Hubbard-model']['ep_d'])[0]
-            print ("ep_d = ",self.ep_d)
-            self.ep_p = np.array(f['parameters']['threebands-Hubbard-model']['ep_p'])[0]
-            print ("ep_p = ",self.ep_p)
+            self.epd = np.array(f['parameters']['threebands-Hubbard-model']['ep_d'])[0]
+            print ("ep_d = ",self.epd)
+            self.epp = np.array(f['parameters']['threebands-Hubbard-model']['ep_p'])[0]
+            print ("ep_p = ",self.epp)
             
     def K_2_iK(self,Kx,Ky):
         delta=1.0e-4
@@ -1656,6 +1656,21 @@ class BSE:
             ek[0,0] = r11; ek[1,1] = r22; ek[2,2] = r33
             ek[0,1] = r12; ek[1,0] = r12
             ek[1,2] = r12; ek[2,1] = r12
+
+        elif self.model=='Emery':
+            ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
+            r1 = -2.* 1j *self.tpd*sin(kx/2.)
+            r2 = 2.* 1j *self.tpd*sin(ky/2.)
+            r3 = 4.*self.tpp*sin(kx/2.)*sin(ky/2.)
+            ek[0,0] = self.epd
+            ek[1,1] = self.epp
+            ek[2,2] = self.epp
+            ek[0,1] = r1
+            ek[1,0] = -r1
+            ek[0,2] = r2
+            ek[2,0] = -r2
+            ek[1,2] = r3
+            ek[2,1] = r3
             
         return ek
 
@@ -1739,7 +1754,7 @@ class BSE:
                                         
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.44, 0.4, 0.34, 0.3, 0.25, 0.24, 0.225, 0.2, 0.175, 0.17, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
-#Ts = [0.04]#, 0.02]
+Ts = [0.0625]
 channels = ['phcharge','phmag']
 channels = ['phmag']
 qs = ['00']#,'pi20','pi0','pipi2','pipi','pi2pi2']
@@ -1753,7 +1768,7 @@ for T_ind, T in enumerate(Ts):
         for q in qs:
             #file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_q'+str(q)+'.hdf5'
-            file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_gpu.hdf5'
             #file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_qpipi_iw'+str(v)+'.hdf5'
             file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
             file_analysis_hdf5 = './T='+str(Ts[T_ind])+'/analysis.hdf5'
@@ -1762,7 +1777,7 @@ for T_ind, T in enumerate(Ts):
                 print ("\n =================================\n")
                 print ("T =", T)
                 # model='square','bilayer','Emery','sdsmodel','trilayer'
-                BSE('sdsmodel',\
+                BSE('Emery',\
                     Ts[T_ind],\
                     file_tp,\
                     file_sp,\
