@@ -55,17 +55,15 @@ class BSE:
         print( "sign:",self.sign,'\n')
         self.orbital=array(f['DCA-loop-functions']['orbital-occupancies']['data'])
         print( "orbital.shape:",self.orbital.shape,'\n')
-        # ('orbital.shape:', (1, 2, 3))
         
-        if self.model=='square':
-            print( "orbital occupancy:",self.orbital[0],'\n')
-            print( "filling =", self.orbital[0,0,0]+self.orbital[0,1,0],'\n')
-        elif self.model=='bilayer':
-            for ii in range(self.orbital.shape[0]):
-                print( '\n iteration ', ii)
-                print( "orbital occupancy:",self.orbital[ii])
-                print( "Layer1 filling =", self.orbital[ii,0,0]+self.orbital[ii,1,0])
-                print( "Layer2 filling =", self.orbital[ii,0,1]+self.orbital[ii,1,1])
+        norbs = self.orbital.shape[2]
+        for ii in range(self.orbital.shape[0]):
+            print( '\n iteration ', ii)
+            
+            for iorb in range(norbs):
+                print ("orbital ", iorb, " filling = ", self.orbital[ii,0,iorb] \
+                                                      + self.orbital[ii,1,iorb],'\n')
+        
         
         self.sigmaarray=array(f['DCA-loop-functions']['L2_Sigma_difference']['data'])
         print( "L2_Sigma_difference =", self.sigmaarray,'\n')
@@ -128,6 +126,7 @@ class BSE:
             print("t-prime = ",self.tp)
             self.Vp = array(f['parameters']['single-band-Hubbard-model']['V-prime'])[0]
             print("V-prime = ",self.Vp)
+            
         if model=='bilayer':
             self.e1 = array(f['parameters']['bilayer-Hubbard-model']['e1'])[0]
             print("e1 = ",self.e1)
@@ -153,6 +152,41 @@ class BSE:
             print("V = ",self.V)
             self.Vp = array(f['parameters']['bilayer-Hubbard-model']['V-prime'])[0]
             print("V-prime = ",self.Vp)
+            
+        if model=='trilayer-Hubbard-model' or model=='sdsmodel':
+            self.e1 = array(f['parameters']['trilayer-Hubbard-model']['e1'])[0]
+            print("e1 = ",self.e1)
+            self.e2 = array(f['parameters']['trilayer-Hubbard-model']['e2'])[0]
+            print("e2 = ",self.e2)
+            self.e3 = array(f['parameters']['trilayer-Hubbard-model']['e3'])[0]
+            print("e3 = ",self.e3)
+            self.U1 = array(f['parameters']['trilayer-Hubbard-model']['U1'])[0]
+            print("U1 = ",self.U1)
+            self.U2 = array(f['parameters']['trilayer-Hubbard-model']['U2'])[0]
+            print("U2 = ",self.U2)
+            self.U3 = array(f['parameters']['trilayer-Hubbard-model']['U3'])[0]
+            print("U3 = ",self.U3)
+            self.t1 = array(f['parameters']['trilayer-Hubbard-model']['t1'])[0]
+            print("t1 = ",self.t1)
+            self.t2 = array(f['parameters']['trilayer-Hubbard-model']['t2'])[0]
+            print("t2 = ",self.t2)
+            self.t3 = array(f['parameters']['trilayer-Hubbard-model']['t3'])[0]
+            print("t3 = ",self.t3)
+            self.t1p = array(f['parameters']['trilayer-Hubbard-model']['t1-prime'])[0]
+            print("t1-prime = ",self.t1p)
+            self.t2p = array(f['parameters']['trilayer-Hubbard-model']['t2-prime'])[0]
+            print("t2-prime = ",self.t2p)
+            self.t3p = array(f['parameters']['trilayer-Hubbard-model']['t3-prime'])[0]
+            print("t3-prime = ",self.t3p)
+            self.tperp = array(f['parameters']['trilayer-Hubbard-model']['t-perp'])[0]
+            print("tperp = ",self.tperp)
+            self.tperpp = array(f['parameters']['trilayer-Hubbard-model']['t-perp-prime'])[0]
+            print("tperp-prime = ",self.tperpp)
+            self.V = array(f['parameters']['trilayer-Hubbard-model']['V'])[0]
+            print("V = ",self.V)
+            self.Vp = array(f['parameters']['trilayer-Hubbard-model']['V-prime'])[0]
+            print("V-prime = ",self.Vp)
+            
         if model=='Emery':
             self.Udd = array(f['parameters']['threebands-Hubbard-model']['U_dd'])[0]
             print("Udd = ",self.Udd)
@@ -166,6 +200,25 @@ class BSE:
             print("ep_d = ",self.ep_d)
             self.ep_p = np.array(f['parameters']['threebands-Hubbard-model']['ep_p'])[0]
             print("ep_p = ",self.ep_p)
+            
+        if model=='ddpmodel':
+            self.Udd = array(f['parameters']['ddp-model']['U_dd'])[0]
+            print("Udd = ",self.Udd)
+            self.Upp = array(f['parameters']['ddp-model']['U_pp'])[0]
+            print("Upp = ",self.Upp)
+            self.tpd = np.array(f['parameters']['ddp-model']['t_pd'])[0]
+            print("tpd = ",self.tpd)
+            self.tpdz2 = np.array(f['parameters']['ddp-model']['t_pdz2'])[0]
+            print("tpdz2 = ",self.tpdz2)
+            self.tpp = np.array(f['parameters']['ddp-model']['t_pp'])[0]
+            print("tpp = ",self.tpp)
+            self.ep_d = np.array(f['parameters']['ddp-model']['ep_d'])[0]
+            print("ep_d = ",self.ep_d)
+            self.edz2 = np.array(f['parameters']['ddp-model']['edz2'])[0]
+            print("edz2 = ",self.edz2)
+            self.ep_p = np.array(f['parameters']['ddp-model']['ep_p'])[0]
+            print("ep_p = ",self.ep_p)
+            
         if model=='dfmodel':
             self.Ud = array(f['parameters']['centered-square-lattice-model']['U_dd'])[0]
             print("Ud = ",self.Ud)
@@ -1563,11 +1616,11 @@ for T_ind, T in enumerate(Ts):
     file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
 
     if(os.path.exists(file_sp)):
-       print( "\n =================================\n")
-       print( "T =", T)
-       # model='square','bilayer','Emery'
-       BSE('bilayer',\
-           Ts[T_ind],\
-           file_sp,\
-           nkfine=100)
+        print( "\n =================================\n")
+        print( "T =", T)
+        # model='square','bilayer','trilayer','Emery','ddp-model','sdsmodel'
+        BSE('bilayer',\
+            Ts[T_ind],\
+            file_sp,\
+            nkfine=100)
               

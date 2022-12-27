@@ -128,20 +128,15 @@ class BSE:
         print ("sign:",self.sign,'\n')
         self.orbital=array(f['DCA-loop-functions']['orbital-occupancies']['data'])
         print ("orbital.shape:",self.orbital.shape,'\n')
-        # ('orbital.shape:', (1, 2, 3))
         
-        if self.model=='square':
-            print ("orbital occupancy:",self.orbital[0],'\n')
-            print ("filling =", self.orbital[0,0,0]+self.orbital[0,1,0],'\n')
-        elif self.model=='bilayer':
-            print ("orbital occupancy:",self.orbital[self.orbital.shape[0]-1],'\n')
-            print ("Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n')
-            print ("Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n')
-        elif self.model=='trilayer' or self.model=='sdsmodel':
-            print ("orbital occupancy:",self.orbital[self.orbital.shape[0]-1],'\n')
-            print ("Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n')
-            print ("Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n')       
-            print ("Layer3 filling =", self.orbital[self.orbital.shape[0]-1,0,2]+self.orbital[self.orbital.shape[0]-1,1,2],'\n')
+        norbs = self.orbital.shape[2]
+        for ii in range(self.orbital.shape[0]):
+            print( '\n iteration ', ii)
+            
+            for iorb in range(norbs):
+                print ("orbital ", iorb, " filling = ", self.orbital[ii,0,iorb] \
+                                                      + self.orbital[ii,1,iorb],'\n')
+        
  
         self.sigmaarray=array(f['DCA-loop-functions']['L2_Sigma_difference']['data'])
         print ("L2_Sigma_difference =", self.sigmaarray,'\n')
@@ -267,6 +262,7 @@ class BSE:
             print ("t-prime = ",self.tp)
             self.Vp = array(f['parameters']['single-band-Hubbard-model']['V-prime'])[0]
             print ("V-prime = ",self.Vp)
+            
         if model=='bilayer':
             self.e1 = array(f['parameters']['bilayer-Hubbard-model']['e1'])[0]
             print ("e1 = ",self.e1)
@@ -292,6 +288,7 @@ class BSE:
             print ("V = ",self.V)
             self.Vp = array(f['parameters']['bilayer-Hubbard-model']['V-prime'])[0]
             print ("V-prime = ",self.Vp)
+            
         if model=='trilayer' or model=='sdsmodel':
             self.e1 = array(f['parameters']['trilayer-Hubbard-model']['e1'])[0]
             print ("e1 = ",self.e1)
@@ -325,6 +322,7 @@ class BSE:
             print ("V = ",self.V)
             self.Vp = array(f['parameters']['trilayer-Hubbard-model']['V-prime'])[0]
             print ("V-prime = ",self.Vp)
+            
         if model=='Emery':
             self.Udd = array(f['parameters']['threebands-Hubbard-model']['U_dd'])[0]
             print ("Udd = ",self.Udd)
@@ -338,6 +336,34 @@ class BSE:
             print ("ep_d = ",self.epd)
             self.epp = np.array(f['parameters']['threebands-Hubbard-model']['ep_p'])[0]
             print ("ep_p = ",self.epp)
+            
+        if model=='ddpmodel':
+            self.Udd = array(f['parameters']['ddp-model']['U_dd'])[0]
+            print("Udd = ",self.Udd)
+            self.Upp = array(f['parameters']['ddp-model']['U_pp'])[0]
+            print("Upp = ",self.Upp)
+            self.tpd = np.array(f['parameters']['ddp-model']['t_pd'])[0]
+            print("tpd = ",self.tpd)
+            self.tpdz2 = np.array(f['parameters']['ddp-model']['t_pdz2'])[0]
+            print("tpdz2 = ",self.tpdz2)
+            self.tpp = np.array(f['parameters']['ddp-model']['t_pp'])[0]
+            print("tpp = ",self.tpp)
+            self.ep_d = np.array(f['parameters']['ddp-model']['ep_d'])[0]
+            print("ep_d = ",self.ep_d)
+            self.edz2 = np.array(f['parameters']['ddp-model']['edz2'])[0]
+            print("edz2 = ",self.edz2)
+            self.ep_p = np.array(f['parameters']['ddp-model']['ep_p'])[0]
+            print("ep_p = ",self.ep_p)
+            
+        if model=='dfmodel':
+            self.Ud = array(f['parameters']['centered-square-lattice-model']['U_dd'])[0]
+            print("Ud = ",self.Ud)
+            self.Uf = array(f['parameters']['centered-square-lattice-model']['U_ff'])[0]
+            print("Uf = ",self.Uf)
+            self.tdd = np.array(f['parameters']['centered-square-lattice-model']['t_dd'])[0]
+            print("tdd = ",self.tdd)
+            self.tddp = np.array(f['parameters']['centered-square-lattice-model']['t_ddp'])[0]
+            print("tddp = ",self.tddp)
             
     def K_2_iK(self,Kx,Ky):
         delta=1.0e-4
@@ -1635,7 +1661,7 @@ class BSE:
             ek[0,0] = r11; ek[1,1] = r22
             ek[0,1] = r12; ek[1,0] = r12
 
-        elif self.model=='trilayer':
+        elif self.model=='trilayer' or self.model=='sdsmodel':
             ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
             r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) - 4.0*self.t1p*cos(kx)*cos(ky)
             r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) - 4.0*self.t2p*cos(kx)*cos(ky)
@@ -1671,6 +1697,28 @@ class BSE:
             ek[2,0] = -r2
             ek[1,2] = r3
             ek[2,1] = r3
+            
+        elif self.model=='ddpmodel':
+            ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
+            r1  =  2.* 1j *self.tpd*sin(kx/2.)
+            r2  = -2.* 1j *self.tpd*sin(ky/2.)
+            r1z =  2.* 1j *self.tpdz2*sin(kx/2.)
+            r2z = -2.* 1j *self.tpdz2*sin(ky/2.)
+            r3  =  4.*self.tpp*sin(kx/2.)*sin(ky/2.)
+            ek[0,0] = self.epd
+            ek[1,1] = self.epp
+            ek[2,2] = self.epp
+            ek[3,3] = self.edz2
+            ek[0,1] = r1
+            ek[1,0] = -r1
+            ek[0,2] = r2
+            ek[2,0] = -r2
+            ek[1,2] = r3
+            ek[2,1] = r3
+            ek[3,1] = -r1z
+            ek[1,3] = r1z
+            ek[3,2] = r2z
+            ek[2,3] = -r2z
             
         return ek
 
@@ -1776,7 +1824,7 @@ for T_ind, T in enumerate(Ts):
             if(os.path.exists(file_tp)):
                 print ("\n =================================\n")
                 print ("T =", T)
-                # model='square','bilayer','Emery','sdsmodel','trilayer'
+                # model='square','bilayer','trilayer','Emery','ddpmodel','sdsmodel'
                 BSE('Emery',\
                     Ts[T_ind],\
                     file_tp,\
