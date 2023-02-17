@@ -1026,6 +1026,28 @@ class BSE:
                 
         print ('\n',"Leading 16 eigenvalues of BSE (no symmetrization)",self.lambdas[0:16])
 
+        
+        # write leading eigenvector into file for post-analysis:
+        if self.write_data_file:
+            fname = 'leading_Evec_vs_Kiwn_T'+str(self.Tval)+'.txt'
+            if os.path.isfile(fname):
+                os.remove(fname)
+                        
+            for io1 in range(nOrb):
+                for io2 in range(nOrb):
+                    o1s = np.full((NwG4, 1), io1)
+                    o2s = np.full((NwG4, 1), io2)
+                    
+                    # print first two leading Evec to include cases
+                    for ilam in range(0,2):
+                        for iNc in range(Nc):
+                            kx = self.Kvecs[iNc,0]; ky = self.Kvecs[iNc,1]
+                            kxs = np.full((NwG4, 1), kx)
+                            kys = np.full((NwG4, 1), ky)
+
+                            self.write_data_6cols(fname, o1s, o2s, kxs, kys, self.wnSet, self.evecs[:,iNc,io1,io2,ilam])
+                    
+                    
         # compare with data obtained by analysis code
         if self.compareHDF5:
             data = h5py.File(self.file_analysis_hdf5,'r')
@@ -1747,6 +1769,12 @@ class BSE:
         f = open(fname,'w',1) 
         for i in range(len(xs)):
             f.write('{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\n'.format(float(xs[i]),float(ys[i]),float(zs[i]),float(ws[i])))
+            
+    def write_data_6cols(self, fname, xs, ys, zs, ws, fs, gs):
+        f = open(fname,'w',1) 
+        for i in range(len(xs)):
+            f.write('{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\n'.format(
+                float(xs[i]),float(ys[i]),float(zs[i]),float(ws[i]),float(fs[i]),float(gs[i])))
             
 ######### Plotting functions
 
