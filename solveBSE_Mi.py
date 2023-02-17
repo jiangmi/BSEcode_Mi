@@ -1771,7 +1771,7 @@ class BSE:
             f.write('{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\n'.format(float(xs[i]),float(ys[i]),float(zs[i]),float(ws[i])))
             
     def write_data_6cols(self, fname, xs, ys, zs, ws, fs, gs):
-        f = open(fname,'w',1) 
+        f = open(fname,'a',1) 
         for i in range(len(xs)):
             f.write('{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\n'.format(
                 float(xs[i]),float(ys[i]),float(zs[i]),float(ws[i]),float(fs[i]),float(gs[i])))
