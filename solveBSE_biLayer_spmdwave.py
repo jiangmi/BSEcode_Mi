@@ -14,7 +14,7 @@ from matplotlib.pyplot import *
 # This currently only works for pp channel
 
 class BSE:
-    def __init__(self,Tval,fileG4,fileG,draw=False,symmetrize_G4=False,phSymmetry=False,nkfine=100,oldFormat=False,newMaster=True,allq=False,evenFreqOnly=True,write_data_file=False):
+    def __init__(self,Tval,fileG4,fileG,draw=False,symmetrize_G4=False,phSymmetry=False,nkfine=100,oldFormat=False,newMaster=True,allq=False,evenFreqOnly=True):
 
         self.Tval = Tval
         
@@ -35,8 +35,6 @@ class BSE:
         self.allq = allq
 
         self.evenFreqOnly = evenFreqOnly
-        
-        self.write_data_file = write_data_file
 
 
         self.readData()
@@ -541,13 +539,8 @@ class BSE:
         # Essentially change the basis of the wave function from layer/orbital |1>, |2>
         # to |a> = 1/sqrt(2) (|1> + |2>) and |b> = 1/sqrt(2) (|1> - |2>)
         # So |a> and |b> are for kz=0 and pi separately
-        # now G for band a and b are
+	# now G for band a and b are
         # <a|G|a> = 1/2 (...) and <b|G|b> = 1/2 (...)
-        
-        # 2*Nc to extend (kx,ky) to (kx,ky,kz)
-        # see setupMomentumTables
-        # self.K[0:Nc,0:2]    = self.Kvecs; self.K[0:Nc,2] = 0
-        # self.K[Nc:2*Nc,0:2] = self.Kvecs; self.K[Nc:2*Nc,2] = np.pi
 
         Nc=self.Nc; NwG4=self.NwG4; NwG=self.NwG; nOrb = self.nOrb
 
@@ -853,201 +846,22 @@ class BSE:
             self.pm[:,:,iqz] = np.dot(self.GammaM[:,:,iqz], self.chi0M[:,:,iqz])/(self.invT*float(2.0*self.Nc))
 
 
+
         if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN","PARTICLE_PARTICLE_SINGLET"):
 
-            self.pm2 = zeros((self.nt,self.nt,2),dtype='complex')
-            
-            for iqz in range(0,2):
+            self.pm2 = zeros((self.nt,self.nt),dtype='complex')
 
-                self.pm2[:,:,iqz] = np.dot(sqrt(real(self.chi0M[:,:,iqz])),np.dot(real(self.GammaM[:,:,iqz]), sqrt(real(self.chi0M[:,:,iqz])))) / (self.invT*float(2*self.Nc))
+            self.pm2[:,:] = np.dot(sqrt(real(self.chi0M[:,:,0])),np.dot(real(self.GammaM[:,:,0]), sqrt(real(self.chi0M[:,:,0]))))
 
+            self.pm2[:,:] *= 1.0/(self.invT*float(2*self.Nc))
 
-    def calcKernelEigenValues(self):
-        # self.nt = 2*self.Nc*self.NwG4
+            self.pm3 = zeros((self.nt,self.nt),dtype='complex')
 
-        nt = self.nt; Nc = 2*self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
+            self.pm3[:,:] = np.dot(sqrt(real(self.chi0M[:,:,1])),np.dot(real(self.GammaM[:,:,1]), sqrt(real(self.chi0M[:,:,1]))))
 
-        self.lambdas = zeros((16,2),dtype='complex')
+            self.pm3[:,:] *= 1.0/(self.invT*float(2*self.Nc))
 
-        self.evecs = zeros((self.nt,16,2),dtype='complex')
 
-        for iqz in range(0,2):
-
-            w,v = linalg.eig(self.pm[:,:,iqz])
-
-            wt = abs(w-1)
-
-            ilead = argsort(wt)[0:16]
-
-            self.lambdas[:,iqz] = w[ilead]
-
-            self.evecs[:,:,iqz] = v[:,ilead]
-
-            print("compare: ", v[:,ilead].shape, self.evecs.shape)
-
-        print ("Leading eigenvalues of lattice Bethe-salpeter equation for qz=0", self.Tval, self.lambdas[:,0])
-
-        print ("Leading eigenvalues of lattice Bethe-salpeter equation for qz=pi", self.Tval, self.lambdas[:,1])
-
-        self.evecs = self.evecs.reshape(NwG4,Nc,16,2)
-        
-        
-        # write data:
-        if self.write_data_file:
-            fname = 'leading_Evec_vs_Kiwn_T'+str(self.Tval)+'.txt'
-            if os.path.isfile(fname):
-                os.remove(fname)
-        
-            # (kx,ky,kz,wn, evec at qz=0, evec at qz=pi)
-            # print first two leading Evec to include cases with two degenerate Eval for d+is wave
-            for ilam in range(0,2):
-                for iNc in range(Nc):
-                    kx = self.K[iNc,0]; ky = self.K[iNc,1]; kz = self.K[iNc,2]
-                    kxs = np.full((NwG4, 1), kx)
-                    kys = np.full((NwG4, 1), ky)
-                    kzs = np.full((NwG4, 1), kz)
-
-                    self.write_data_6cols(fname, kxs,kys,kzs, \
-                                          self.wnSet, self.evecs[:,iNc,ilam,0], self.evecs[:,iNc,ilam,1])
-
-                    
-        #Now find d-wave eigenvalue of BSE (based on g(k) in band kz=0)
-
-        gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
-
-        self.found_d=False
-
-        for ia in range(0,16):
-
-            r1 = dot(gk,self.evecs[int(self.NwG4/2),0:int(Nc/2),ia,0])
-
-            if abs(r1) >= 0.2: 
-
-                self.lambdad = self.lambdas[ia,0]
-
-                self.ind_d = ia
-
-                self.found_d=True
-
-                break
-
-        if self.found_d: print("d-wave eigenvalue of BSE for qz=0", self.Tval, real(self.lambdad))
-
-        #self.evecs2 = self.evecs2.reshape(NwG4,16,2,nt)
-
-
-        #Now find d-wave eigenvalue of BSE (based on g(k) in band kz=pi)
-
-        self.found_d=False
-
-        for ia in range(0,16):
-
-            r1 = dot(gk,self.evecs[int(self.NwG4/2),0:int(Nc/2),ia,1])
-
-            if abs(r1) >= 0.2:
-
-                self.lambdad = self.lambdas[ia,1]
-
-                self.ind_d = ia
-
-                self.found_d=True
-
-                break
-
-        if self.found_d: print("d-wave eigenvalue of BSE for qz=pi", self.Tval, real(self.lambdad))
-
-
-                    
-        ###############################################################################################
-        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
-            
-            self.lambdas2 = zeros((16,2),dtype='complex')
-
-            self.evecs2 = zeros((self.nt,16,2),dtype='complex')
-
-            for iqz in range(0,2):
-                
-                w2,v2 = linalg.eigh(self.pm2[:,:,iqz])
-
-                wt2 = abs(w2-1)
-
-                ilead2 = argsort(wt2)[0:16]
-
-                self.lambdas2[:,iqz] = w2[ilead2]
-
-                self.evecs2[:,:,iqz] = v2[:,ilead2]
-
-            print ("Leading eigenvalues of symmetrized Bethe-salpeter equation for qz=0", self.Tval, self.lambdas2[:,0])
-            
-            print ("Leading eigenvalues of symmetrized Bethe-salpeter equation for qz=pi", self.Tval, self.lambdas2[:,1])
-            
-            self.evecs2 = self.evecs2.reshape(NwG4,Nc,16,2)
-
-
-            # write data:
-            if self.write_data_file:
-                fname = 'leading_Evec_sym_vs_Kiwn_T'+str(self.Tval)+'.txt'
-                if os.path.isfile(fname):
-                    os.remove(fname)
-            
-                # (kx,ky,kz,wn, evec at qz=0, evec at qz=pi)
-                # print first two leading Evec to include cases with two degenerate Eval for d+is wave
-                for ilam in range(0,2):
-                    for iNc in range(Nc):
-                        kx = self.K[iNc,0]; ky = self.K[iNc,1]; kz = self.K[iNc,2]
-                        kxs = np.full((NwG4, 1), kx)
-                        kys = np.full((NwG4, 1), ky)
-                        kzs = np.full((NwG4, 1), kz)
-                        self.write_data_6cols(fname, kxs,kys,kzs, \
-                                              self.wnSet, self.evecs2[:,iNc,ilam,0], self.evecs2[:,iNc,ilam,1])
-                    
-                    
-            #Now find d-wave eigenvalue of symmetrized BSE (based on g(k) in band kz=0)
-
-            gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
-
-            self.found_d=False
-
-            for ia in range(0,16):
-
-                r1 = dot(gk,self.evecs2[int(self.NwG4/2),0:int(Nc/2),ia,0])
-
-                if abs(r1) >= 0.2: 
-
-                    self.lambdad = self.lambdas2[ia,0]
-
-                    self.ind_d = ia
-
-                    self.found_d=True
-
-                    break
-
-            if self.found_d: print("d-wave eigenvalue of symmetrized BSE for qz=0", self.Tval, real(self.lambdad))
-
-            #self.evecs2 = self.evecs2.reshape(NwG4,16,2,nt)
-
-
-            #Now find d-wave eigenvalue of symmetrized BSE (based on g(k) in band kz=pi)
-
-            self.found_d=False
-
-            for ia in range(0,16):
-
-                r1 = dot(gk,self.evecs2[int(self.NwG4/2),0:int(Nc/2),ia,1])
-
-                if abs(r1) >= 0.2:
-
-                    self.lambdad = self.lambdas2[ia,1]
-
-                    self.ind_d = ia
-
-                    self.found_d=True
-
-                    break
-
-            if self.found_d: print("d-wave eigenvalue of symmetrized BSE for qz=pi", self.Tval, real(self.lambdad))
-
-                
     def buildChi0Lattice(self,nkfine):
 
         print ("Now calculating chi0 on lattice")
@@ -1790,6 +1604,117 @@ class BSE:
 
 ######### Plotting functions
 
+    def calcKernelEigenValues(self):
+
+        nt = self.nt; Nc = 2*self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
+
+        self.lambdas = zeros((16,2),dtype='complex')
+
+        self.evecs = zeros((self.nt,16,2),dtype='complex')
+
+        for iqz in range(0,2):
+
+            w,v = linalg.eig(self.pm[:,:,iqz])
+
+            wt = abs(w-1)
+
+            ilead = argsort(wt)[0:16]
+
+            self.lambdas[:,iqz] = w[ilead]
+
+            self.evecs[:,:,iqz] = v[:,ilead]
+
+            print("compare: ", v[:,ilead].shape, self.evecs.shape)
+
+        print ("Leading eigenvalues of lattice Bethe-salpeter equation for qz=0", self.Tval, self.lambdas[:,0])
+
+        print ("Leading eigenvalues of lattice Bethe-salpeter equation for qz=pi", self.Tval, self.lambdas[:,1])
+
+        self.evecs = self.evecs.reshape(NwG4,Nc,16,2)
+
+
+
+        if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
+
+            w2,v2 = linalg.eigh(self.pm2)
+
+            wt2 = abs(w2-1)
+
+            ilead2 = argsort(wt2)
+
+            self.lambdas2 = w2[ilead2]
+
+            self.evecs2   = v2[:,ilead2]
+
+            self.evecs2 = self.evecs2.reshape(NwG4,Nc,nt)
+
+            print ("10 leading eigenvalues of symmetrized Bethe-salpeter equation for qz=0", self.Tval, self.lambdas2[0:10])
+
+
+            w3,v3 = linalg.eigh(self.pm3)
+
+            wt3 = abs(w3-1)
+
+            ilead3 = argsort(wt3)
+
+            self.lambdas3 = w3[ilead3]
+
+            self.evecs3   = v3[:,ilead3]
+
+            self.evecs3 = self.evecs3.reshape(NwG4,Nc,nt)
+
+            print ("10 leading eigenvalues of symmetrized Bethe-salpeter equation for qz=pi", self.Tval, self.lambdas3[0:10])
+
+
+            #Now find d-wave eigenvalue (based on g(k) in band kz=0)
+
+            gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
+
+            self.found_d=False
+
+            for ia in range(0,nt):
+
+                r1 = dot(gk,self.evecs2[int(self.NwG4/2),0:int(Nc/2),ia])
+
+                if abs(r1) >= 2.0e-1: 
+
+                    self.lambdad = self.lambdas2[ia]
+
+                    self.ind_d = ia
+
+                    self.found_d=True
+
+                    break
+
+            if self.found_d: print("d-wave eigenvalue for qz=0", self.Tval, self.lambdad)
+
+            #self.evecs2 = self.evecs2.reshape(NwG4,16,2,nt)
+
+
+            #Now find d-wave eigenvalue (based on g(k) in band kz=pi)
+
+            gk = cos(self.Kvecs[:,0]) - cos(self.Kvecs[:,1]) # dwave form factor
+
+            self.found_d=False
+
+            for ia in range(0,nt):
+
+                r1 = dot(gk,self.evecs3[int(self.NwG4/2),0:int(Nc/2),ia])
+
+                if abs(r1) >= 2.0e-1:
+
+                    self.lambdad = self.lambdas3[ia]
+
+                    self.ind_d = ia
+
+                    self.found_d=True
+
+                    break
+
+            if self.found_d: print("d-wave eigenvalue for qz=pi", self.Tval, self.lambdad)
+
+
+
     def plotLeadingSolutions(self,Kvecs,lambdas,evecs,title):
 
         mpl.style.use("ggplot")
@@ -1988,15 +1913,8 @@ class BSE:
         GP = 0.5*(GP + GP.transpose())
 
         self.G4K[:,:,:,:,0] = GP.reshape(nwn,Nc,nwn,Nc)
-        
-        
-    ######### writting functions
 
-    def write_data_6cols(self, fname, kx,ky,kz, xs, ys, zs):
-        f = open(fname,'a',1) 
-        for i in range(len(xs)):
-            f.write('{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\n'.format(float(kx[i]),float(ky[i]),float(kz[i]),float(xs[i]),float(ys[i]),float(zs[i])))
-            
+
 
     # def apply_ph_symmetry_pp(self,G4):
 
@@ -2030,7 +1948,7 @@ class BSE:
     
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.44, 0.4, 0.34, 0.3, 0.25, 0.24, 0.2, 0.17, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
-#Ts = [0.03]
+#Ts = [0.08]
 channels = ['phcharge','phmag']
 channels = ['phmag']
 qs = ['00','pi20','pi0','pipi2','pipi','pi2pi2']
@@ -2053,6 +1971,5 @@ for T_ind, T in enumerate(Ts):
                 # model='square','bilayer','Emery'
                 BSE(Ts[T_ind],\
                     fileG4,\
-                    fileG,\
-                    write_data_file=True)
+                    fileG)
                 
