@@ -262,6 +262,22 @@ class BSE:
             print ("t-prime = ",self.tp)
             self.Vp = array(f['parameters']['single-band-Hubbard-model']['V-prime'])[0]
             print ("V-prime = ",self.Vp)
+
+        if model=='square_txty':
+            self.U = array(f['parameters']['single-band-Hubbard-model']['U'])[0]
+            print ("U = ",self.U)
+            self.tx = array(f['parameters']['single-band-Hubbard-model']['tx'])[0]
+            print ("tx = ",self.tx)
+            self.ty = array(f['parameters']['single-band-Hubbard-model']['ty'])[0]
+            print ("ty = ",self.ty)
+            self.tx_nn = array(f['parameters']['single-band-Hubbard-model']['tx_nn'])[0]
+            print ("tx_nn = ",self.tx_nn)
+            self.ty_nn = array(f['parameters']['single-band-Hubbard-model']['ty_nn'])[0]
+            print ("ty_nn = ",self.ty_nn)
+            self.tp = array(f['parameters']['single-band-Hubbard-model']['t-prime'])[0]
+            print ("t-prime = ",self.tp)
+            self.Vp = array(f['parameters']['single-band-Hubbard-model']['V-prime'])[0]
+            print ("V-prime = ",self.Vp)
             
         if model=='bilayer':
             self.e1 = array(f['parameters']['bilayer-Hubbard-model']['e1'])[0]
@@ -289,6 +305,32 @@ class BSE:
             self.Vp = array(f['parameters']['bilayer-Hubbard-model']['V-prime'])[0]
             print ("V-prime = ",self.Vp)
             
+        if model=='dsmodel':
+            self.e1 = array(f['parameters']['ds-model']['e1'])[0]
+            print("e1 = ",self.e1)
+            self.e2 = array(f['parameters']['ds-model']['e2'])[0]
+            print("e2 = ",self.e2)
+            self.U1 = array(f['parameters']['ds-model']['U1'])[0]
+            print("U1 = ",self.U1)
+            self.U2 = array(f['parameters']['ds-model']['U2'])[0]
+            print("U2 = ",self.U2)
+            self.t1 = array(f['parameters']['ds-model']['t1'])[0]
+            print("t1 = ",self.t1)
+            self.t2 = array(f['parameters']['ds-model']['t2'])[0]
+            print("t2 = ",self.t2)
+            self.t1p = array(f['parameters']['ds-model']['t1-prime'])[0]
+            print("t1-prime = ",self.t1p)
+            self.t2p = array(f['parameters']['ds-model']['t2-prime'])[0]
+            print("t2-prime = ",self.t2p)
+            self.tperp = array(f['parameters']['ds-model']['t-perp'])[0]
+            print("tperp = ",self.tperp)
+            self.tperp_p = array(f['parameters']['ds-model']['t-perp-prime'])[0]
+            print("tperp-prime = ",self.tperp_p)
+            self.V = array(f['parameters']['ds-model']['V'])[0]
+            print("V = ",self.V)
+            self.Vp = array(f['parameters']['ds-model']['V-prime'])[0]
+            print("V-prime = ",self.Vp)
+
         if model=='trilayer' or model=='sdsmodel':
             self.e1 = array(f['parameters']['trilayer-Hubbard-model']['e1'])[0]
             print ("e1 = ",self.e1)
@@ -1675,11 +1717,22 @@ class BSE:
         if self.model=='square':
             ek  = -2.*self.t*(cos(kx)+cos(ky)) - 4.0*self.tp*cos(kx)*cos(ky) 
 
+        elif self.model=='square_txty':
+            ek  = -2.*(self.tx*cos(kx) + self.ty*cos(ky)) -2.*(self.tx_nn*cos(2.*kx) + self.ty_nn*cos(2.*ky)) - 4.0*self.tp*cos(kx)*cos(ky)
+
         elif self.model=='bilayer':            
             ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
             r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) - 4.0*self.t1p*cos(kx)*cos(ky)
             r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) - 4.0*self.t2p*cos(kx)*cos(ky)
             r12  = -self.tperp -2. * self.tperp_p * (cos(kx) + cos(ky))
+            ek[0,0] = r11; ek[1,1] = r22
+            ek[0,1] = r12; ek[1,0] = r12
+
+        elif self.model=='dsmodel':
+            ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
+            r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) - 4.0*self.t1p*cos(kx)*cos(ky)
+            r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) - 4.0*self.t2p*cos(kx)*cos(ky)
+            r12  = -self.tperp -2. * self.tperp_p * (cos(kx) - cos(ky))
             ek[0,0] = r11; ek[1,1] = r22
             ek[0,1] = r12; ek[1,0] = r12
 
@@ -1830,7 +1883,7 @@ class BSE:
                                         
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.44, 0.4, 0.34, 0.3, 0.25, 0.24, 0.225, 0.2, 0.175, 0.17, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
-Ts = [0.0625]
+#Ts = [0.025]
 channels = ['phcharge','phmag']
 channels = ['phmag']
 qs = ['00']#,'pi20','pi0','pipi2','pipi','pi2pi2']
@@ -1844,7 +1897,7 @@ for T_ind, T in enumerate(Ts):
         for q in qs:
             #file_tp = './T='+str(Ts[T_ind])+'/dca_tp_'+ch+'_q'+q+'.hdf5'
             file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_q'+str(q)+'.hdf5'
-            file_tp = './T='+str(Ts[T_ind])+'/dca_tp_gpu.hdf5'
+            file_tp = './T='+str(Ts[T_ind])+'/dca_tp.hdf5'
             #file_tp = './T='+str(Ts[T_ind])+'/dca_tp_mag_qpipi_iw'+str(v)+'.hdf5'
             file_sp = './T='+str(Ts[T_ind])+'/dca_sp.hdf5'
             file_analysis_hdf5 = './T='+str(Ts[T_ind])+'/analysis.hdf5'
@@ -1852,8 +1905,8 @@ for T_ind, T in enumerate(Ts):
             if(os.path.exists(file_tp)):
                 print ("\n =================================\n")
                 print ("T =", T)
-                # model='square','bilayer','trilayer','Emery','ddpmodel','sdsmodel'
-                BSE('Emery',\
+                # model='square','square_txty','bilayer','dsmodel','trilayer','Emery','ddpmodel','sdsmodel'
+                BSE('square_txty_nn',\
                     Ts[T_ind],\
                     file_tp,\
                     file_sp,\
