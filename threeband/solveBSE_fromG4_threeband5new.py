@@ -12,7 +12,8 @@ import symmetrize_Nc4x4
 
 class BSE:
 
-    def __init__(self,fileG4,fileG="dca_tp.hdf5",draw=True,useG0=False,symmetrize_G4=False,phSymmetry=False,calcRedVertex=False,calcCluster=True,nkfine=100):
+    def __init__(self,Tval,fileG4,fileG,draw,useG0,symmetrize_G4,phSymmetry,calcRedVertex,calcCluster,nkfine,write_data_file):
+        self.Tval = Tval
         self.fileG4 = fileG4
         self.fileG = fileG
         self.draw = draw
@@ -22,6 +23,8 @@ class BSE:
         self.calcCluster = calcCluster
         self.calcRedVertex = calcRedVertex
         self.phSymmetry = phSymmetry
+        self.write_data_file = write_data_file
+        
         self.readData()
         #self.calcPS()
         self.reorderG4()
@@ -36,7 +39,13 @@ class BSE:
         self.calcGammaIrr()
         if calcCluster == False: self.buildChi0Lattice(nkfine)
         self.buildKernelMatrix()
-        self.calcKernelEigenValues()            
+        
+        # pm2 is using Peizhi Mai's PRB (2021)'s new methods with sqrt(chi)
+        self.calcKernelEigenValuesnew()
+            
+        # pm is using standard Gamma*chi0
+        #self.calcKernelEigenValues()          
+        
         if self.draw: self.plotLeadingSolutions(self.Kvecs,self.lambdas[0:4],self.evecs[:,:,0,0,0:4],"Cu-Cu")
         #if calcRedVertex: self.calcReducibleLatticeVertex()
         #if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
@@ -851,6 +860,27 @@ class BSE:
         self.evecs = self.evecs.reshape(NwG4,Nc,nOrb,nOrb,nt)
         
         
+        # write leading eigenvector into file for post-analysis:
+        if self.write_data_file:
+            fname = 'leading_Evec_vs_Kiwn_T'+str(self.Tval)+'.txt'
+            if os.path.isfile(fname):
+                os.remove(fname)
+                        
+            for io1 in range(nOrb):
+                for io2 in range(nOrb):
+                    o1s = np.full((NwG4, 1), io1)
+                    o2s = np.full((NwG4, 1), io2)
+                    
+                    # print first two leading Evec
+                    for ilam in range(0,2):
+                        for iNc in range(Nc):
+                            kx = self.Kvecs[iNc,0]; ky = self.Kvecs[iNc,1]
+                            kxs = np.full((NwG4, 1), kx)
+                            kys = np.full((NwG4, 1), ky)
+
+                            self.write_data_6cols(fname, o1s, o2s, kxs, kys, self.wnSet, self.evecs[:,iNc,io1,io2,ilam])
+                            
+        
         iw0=int(NwG4/2)
         for inr in range(16):
             imax = argmax(self.evecs[iw0,:,0,0,inr])
@@ -894,21 +924,14 @@ class BSE:
 
         
     def calcKernelEigenValues(self):
-        # pm2 is using Peizhi Mai's PRB (2021)'s new methods with sqrt(chi)
+        # pm is using standard Gamma*chi instead of Peizhi Mai's PRB (2021)'s new methods with sqrt(chi)
         nt = self.nt; Nc = self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
-        w,v = linalg.eig(self.pm2)
+        w,v = linalg.eig(self.pm)
         wt = abs(w-1)
         ilead = argsort(wt)
         self.lambdas = w[ilead]
         self.evecs = v[:,ilead]
         self.evecs = self.evecs.reshape(NwG4,Nc,nOrb,nOrb,nt)
-
-        w2,v2 = linalg.eig(self.pm2)
-        wt2 = abs(w2-1)
-        ilead2 = argsort(wt2)
-        self.lambdas2 = w2[ilead2]
-        self.evecs2 = v2[:,ilead2]
-        self.evecs2 = self.evecs2.reshape(NwG4,Nc,nOrb,nOrb,nt)
         
         iw0=int(NwG4/2)
         for inr in range(16):
@@ -1177,6 +1200,30 @@ class BSE:
                 GammaFS[i1,i2] = sum(G4[NwG4/2-1:NwG4/2+1,iK1,NwG4/2-1::NwG4/2+1,iK2])/float(4.*NFs)
         return GammaFS
 
+    
+######### writting functions
+
+    def write_data_2cols(self, fname, xs, ys):
+        f = open(fname,'w',1) 
+        for i in range(len(xs)):
+            f.write('{:.6e}\t{:.6e}\n'.format(float(xs[i]),float(ys[i])))
+
+    def write_data_3cols(self, fname, xs, ys, zs):
+        f = open(fname,'w',1) 
+        for i in range(len(xs)):
+            f.write('{:.6e}\t{:.6e}\t{:.6e}\n'.format(float(xs[i]),float(ys[i]),float(zs[i])))
+            
+    def write_data_4cols(self, fname, xs, ys, zs, ws):
+        f = open(fname,'w',1) 
+        for i in range(len(xs)):
+            f.write('{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\n'.format(float(xs[i]),float(ys[i]),float(zs[i]),float(ws[i])))
+            
+    def write_data_6cols(self, fname, xs, ys, zs, ws, fs, gs):
+        f = open(fname,'a',1) 
+        for i in range(len(xs)):
+            f.write('{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\t{:.6e}\n'.format(
+                float(xs[i]),float(ys[i]),float(zs[i]),float(ws[i]),float(fs[i]),float(gs[i])))
+            
     
 ######### Plotting functions
 

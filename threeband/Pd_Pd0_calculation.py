@@ -19,6 +19,29 @@ import matplotlib as mpll
 import symmetrize_Nc4x4
 import solveBSE_fromG4_threeband5new
 
+
+def changeG4LLbar(Tchi0LLbar,Tchi0):
+    Tchi0LLbartemp1 = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
+    for l2 in range(nOrb):
+        for l1 in range(nOrb):
+            for k1 in range(b.Nc):
+                for k2 in range(b.Nc):
+                    for iw1 in range(b.NwG4):
+                        for iw2 in range(b.NwG4):
+                            Tchi0LLbartemp1[iw1,k1,:,:,iw2,k2,l1,l2]= \
+                            np.dot(np.dot(leftmatrix[k1,:,:],Tchi0[iw1,k1,:,:,iw2,k2,l1,l2]),\
+                                   rightmatrix[k1,:,:])
+
+    for l4 in range(nOrb):
+        for l3 in range(nOrb):
+            for k1 in range(b.Nc):
+                for k2 in range(b.Nc):
+                    for iw1 in range(b.NwG4):
+                        for iw2 in range(b.NwG4):
+                            Tchi0LLbar[iw1,k1,l3,l4,iw2,k2,:,:]= \
+                            np.dot(np.dot(rightmatrix[k2,:,:],Tchi0LLbartemp1[iw1,k1,l3,l4,iw2,k2,:,:]),\
+                                   leftmatrix[k2,:,:])
+                            
 ###################################################################################
 Nc = 4
 epx = 3.29
@@ -49,169 +72,152 @@ for T_ind, T in enumerate(Ts):
                 print ("\n =================================\n")
                 print ("T =", T)
 
-                b = solveBSE_fromG4_threeband5new.BSE(file_tp,fileG=file_sp,\
+                b = solveBSE_fromG4_threeband5new.BSE(Tval=T,\
+                                                      fileG4=file_tp,\
+                                                      fileG=file_sp,\
                                                       draw=True,\
                                                       useG0=False,\
                                                       symmetrize_G4=False,\
                                                       phSymmetry=False,\
                                                       calcRedVertex=False,\
-                                                      calcCluster=False,\
-                                                      nkfine=100)
-
-'''
-Follow the procedure in Eq.(13) of PRB 103, 144514 (2021) by Peizhi Mai
-'''
-nt = b.nt; nc=b.Nc; nw=b.NwG4; nOrb=b.nOrb;
-Kvecsnonneg=b.Kvecs.copy()
-
-# switch all K points to be positive within (0,2*pi)
-for i in range(b.Nc):
-    if (b.Kvecs[i,0]<0):
-        Kvecsnonneg[i,0] = Kvecsnonneg[i,0] +2*np.pi
-    if (b.Kvecs[i,1]<0):
-        Kvecsnonneg[i,1] = Kvecsnonneg[i,1] +2*np.pi
-        
-rightmatrix = zeros((nc,nOrb,nOrb),dtype='complex')
-leftmatrix = zeros((nc,nOrb,nOrb),dtype='complex')
-
-leftmatrix[:,0,0]=rightmatrix[:,0,0]=1.0
-
-for k in range(b.Nc):
-    gammak = sqrt(sin(b.Kvecs[k,0]/2)**2+sin(b.Kvecs[k,1]/2)**2)
-    if (abs(gammak) < 1.e-10):
-        rightmatrix[k,1,1]= 1j/sqrt(2)
-        rightmatrix[k,1,2]= -1j/sqrt(2)
-        rightmatrix[k,2,1]= -1j/sqrt(2)
-        rightmatrix[k,2,2]= -1j/sqrt(2)
-        leftmatrix[k,1,1]= -1j/sqrt(2)
-        leftmatrix[k,1,2]= 1j/sqrt(2)
-        leftmatrix[k,2,1]= 1j/sqrt(2)
-        leftmatrix[k,2,2]= 1j/sqrt(2)
-    else:
-        kx = b.Kvecs[k,0]; ky = b.Kvecs[k,1];
-        if (kx < 0):
-            kx = kx +2*np.pi
-        if (ky < 0):
-            ky = ky +2*np.pi
-        rightmatrix[k,1,1]= 1j * sin(kx/2)/gammak
-        rightmatrix[k,1,2]= -1j * sin(ky/2)/gammak
-        rightmatrix[k,2,1]= -1j * sin(ky/2)/gammak
-        rightmatrix[k,2,2]= -1j * sin(kx/2)/gammak
-        leftmatrix[k,1,1]= -1j * sin(kx/2)/gammak
-        leftmatrix[k,1,2]= 1j * sin(ky/2)/gammak
-        leftmatrix[k,2,1]= 1j * sin(ky/2)/gammak
-        leftmatrix[k,2,2]= 1j * sin(kx/2)/gammak
-                            
-def changeG4LLbar(Tchi0LLbar,Tchi0):
-    Tchi0LLbartemp1 = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
-    for l2 in range(nOrb):
-        for l1 in range(nOrb):
-            for k1 in range(b.Nc):
-                for k2 in range(b.Nc):
-                    for iw1 in range(b.NwG4):
-                        for iw2 in range(b.NwG4):
-                            Tchi0LLbartemp1[iw1,k1,:,:,iw2,k2,l1,l2]= \
-                            np.dot(np.dot(leftmatrix[k1,:,:],Tchi0[iw1,k1,:,:,iw2,k2,l1,l2]),\
-                                   rightmatrix[k1,:,:])
-
-    for l4 in range(nOrb):
-        for l3 in range(nOrb):
-            for k1 in range(b.Nc):
-                for k2 in range(b.Nc):
-                    for iw1 in range(b.NwG4):
-                        for iw2 in range(b.NwG4):
-                            Tchi0LLbar[iw1,k1,l3,l4,iw2,k2,:,:]= \
-                            np.dot(np.dot(rightmatrix[k2,:,:],Tchi0LLbartemp1[iw1,k1,l3,l4,iw2,k2,:,:]),\
-                                   leftmatrix[k2,:,:])
-        
-gkd = cos(Kvecsnonneg[:,0]) - cos(Kvecsnonneg[:,1])
-        
-# lambdas2 is leading eigenvalues of pm2 matrix in solveBSE*.py
-eigval = b.lambdas2
-Lambda = np.diag(1./(1-eigval))
-
-# Dkk = zeros((nt,nt), dtype=real)
-phit =zeros((nw,nc,nOrb,nOrb,nt), dtype=complex)
-phit2=zeros((nw,nc,nOrb,nOrb,nt), dtype=complex)
-Dkk =zeros((nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb), dtype=complex)
-Dkk2=zeros((nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb), dtype=complex)
-Pd =zeros((nOrb,nOrb,nOrb,nOrb), dtype=complex)
-PdIa =zeros((nOrb,nOrb,nOrb,nOrb), dtype=complex)
-
-chi0 = b.chi0
-for ialpha in range(nt):
-    phit[:,:,:,:,ialpha] = b.evecs2[:,:,:,:,ialpha]
-    
-# leading eigenvector
-phit2[:,:,:,:,0] = b.evecs2[:,:,:,:,0]
-
-#phi = phit.reshape(nt,nt)
-#phi2 = phit2.reshape(nt,nt)
-
-evecscom = b.evecs2.reshape(nt,nt)
-Dkktemp = dot(phit,dot(Lambda,linalg.inv(evecscom)))
-Dkktemp2 = Dkktemp.reshape(nt,nt)
-Dkk = dot(b.chi0M,Dkktemp2)
-#Dkk = dot(phi,dot(Lambda,phi.T))
-Dkk = Dkk.reshape(nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb)
-#Dkk2 = dot(phi2,dot(Lambda,phi2.T))
-Lambda2 = Lambda.copy()
-for i in range(len(Lambda)):
-    Lambda2[i,i] = 0.0
-Lambda2[0,0] = Lambda[0,0]
-Dkk2temp = dot(phit2,dot(Lambda2,linalg.inv(evecscom)))
-Dkk2temp2 = Dkk2temp.reshape(nt,nt)
-Dkk2 = dot(b.chiMasqrt,dot(Dkk2temp2,b.chiMasqrt))
-Dkk2 = Dkk2.reshape(nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb)
-DkkLLbar = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
-Dkk2LLbar = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
-changeG4LLbar(DkkLLbar,Dkk)
-changeG4LLbar(Dkk2LLbar,Dkk2)
-LkkLLbar = sum(sum(DkkLLbar,axis=0),axis=3)
-Lkk2LLbar = sum(sum(Dkk2LLbar,axis=0),axis=3)
-for l1 in range(nOrb):
-    for l2 in range(nOrb):
-        for l3 in range(nOrb):
-            for l4 in range(nOrb):
-                Pd[l1,l2,l3,l4] = dot(gkd,dot(LkkLLbar[:,l1,l2,:,l3,l4],gkd)) * b.temp/b.Nc
-                PdIa[l1,l2,l3,l4] = dot(gkd,dot(Lkk2LLbar[:,l1,l2,:,l3,l4],gkd)) * b.temp/b.Nc
+                                                      calcCluster=False,
+                                                      nkfine=100,\
+                                                      write_data_file=True)
                 
-Pd0 =zeros((nOrb,nOrb,nOrb,nOrb), dtype=complex)
-Pd0Ia =zeros((nOrb,nOrb,nOrb,nOrb), dtype=complex)
-for i in range(len(Lambda)):
-    Lambda[i,i] = 1.0
-for ialpha in range(nt):
-    phit[:,:,:,:,ialpha] = b.evecs2[:,:,:,:,ialpha]
-phit2[:,:,:,:,0] = b.evecs2[:,:,:,:,0]
-        #phi = phit.reshape(nt,nt)
-        #phi2 = phit2.reshape(nt,nt)
-evecscom = b.evecs2.reshape(nt,nt)
-Dkktemp = dot(phit,dot(Lambda,linalg.inv(evecscom)))
-Dkktemp2 = Dkktemp.reshape(nt,nt)
-Dkk = dot(b.chi0M,Dkktemp2)
-#Dkk = dot(phi,dot(Lambda,phi.T))
-Dkk = Dkk.reshape(nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb)
-#Dkk2 = dot(phi2,dot(Lambda,phi2.T))
-Dkk2temp = dot(phit2,linalg.inv(evecscom))
-Dkk2temp2 = Dkk2temp.reshape(nt,nt)
-Dkk2 = dot(b.chiMasqrt,dot(Dkk2temp2,b.chiMasqrt))
-Dkk2 = Dkk2.reshape(nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb)
-DkkLLbar = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
-Dkk2LLbar = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
-changeG4LLbar(DkkLLbar,Dkk)
-changeG4LLbar(Dkk2LLbar,Dkk2)
-LkkLLbar = sum(sum(DkkLLbar,axis=0),axis=3)
-Lkk2LLbar = sum(sum(Dkk2LLbar,axis=0),axis=3)
-for l1 in range(nOrb):
-    for l2 in range(nOrb):
-        for l3 in range(nOrb):
-            for l4 in range(nOrb):
-                Pd0[l1,l2,l3,l4] = dot(gkd,dot(LkkLLbar[:,l1,l2,:,l3,l4],gkd)) * b.temp/b.Nc
-                Pd0Ia[l1,l2,l3,l4] = dot(gkd,dot(Lkk2LLbar[:,l1,l2,:,l3,l4],gkd)) * b.temp/b.Nc
-print("Pd=",np.sum(Pd))
-print("PdIa=",np.sum(PdIa))
-print("Pd0=",np.sum(Pd0))
-print("Pd0/(1-lambda)=",np.sum(Pd0)/(1-b.lambdas2[0].real))
-print("Pd0Ia=",np.sum(Pd0Ia))
-print("Pd0Ia/(1-lambda)=",np.sum(Pd0Ia)/(1-b.lambdas2[0].real))
+                '''
+                Follow the procedure in Eq.(13) of PRB 103, 144514 (2021) by Peizhi Mai
+                The following must use the eigenvector obtained by sqrt(chi0) in above PRB
+                '''
+                nt = b.nt; nc=b.Nc; nw=b.NwG4; nOrb=b.nOrb;
+                Kvecsnonneg=b.Kvecs.copy()
+
+                # switch all K points to be positive within (0,2*pi)
+                for i in range(b.Nc):
+                    if (b.Kvecs[i,0]<0):
+                        Kvecsnonneg[i,0] = Kvecsnonneg[i,0] +2*np.pi
+                    if (b.Kvecs[i,1]<0):
+                        Kvecsnonneg[i,1] = Kvecsnonneg[i,1] +2*np.pi
+
+                rightmatrix = zeros((nc,nOrb,nOrb),dtype='complex')
+                leftmatrix = zeros((nc,nOrb,nOrb),dtype='complex')
+
+                leftmatrix[:,0,0]=rightmatrix[:,0,0]=1.0
+
+                for k in range(b.Nc):
+                    gammak = sqrt(sin(b.Kvecs[k,0]/2)**2+sin(b.Kvecs[k,1]/2)**2)
+                    if (abs(gammak) < 1.e-10):
+                        rightmatrix[k,1,1]= 1j/sqrt(2)
+                        rightmatrix[k,1,2]= -1j/sqrt(2)
+                        rightmatrix[k,2,1]= -1j/sqrt(2)
+                        rightmatrix[k,2,2]= -1j/sqrt(2)
+                        leftmatrix[k,1,1]= -1j/sqrt(2)
+                        leftmatrix[k,1,2]= 1j/sqrt(2)
+                        leftmatrix[k,2,1]= 1j/sqrt(2)
+                        leftmatrix[k,2,2]= 1j/sqrt(2)
+                    else:
+                        kx = b.Kvecs[k,0]; ky = b.Kvecs[k,1];
+                        if (kx < 0):
+                            kx = kx +2*np.pi
+                        if (ky < 0):
+                            ky = ky +2*np.pi
+                        rightmatrix[k,1,1]= 1j * sin(kx/2)/gammak
+                        rightmatrix[k,1,2]= -1j * sin(ky/2)/gammak
+                        rightmatrix[k,2,1]= -1j * sin(ky/2)/gammak
+                        rightmatrix[k,2,2]= -1j * sin(kx/2)/gammak
+                        leftmatrix[k,1,1]= -1j * sin(kx/2)/gammak
+                        leftmatrix[k,1,2]= 1j * sin(ky/2)/gammak
+                        leftmatrix[k,2,1]= 1j * sin(ky/2)/gammak
+                        leftmatrix[k,2,2]= 1j * sin(kx/2)/gammak
+
+
+                gkd = cos(Kvecsnonneg[:,0]) - cos(Kvecsnonneg[:,1])
+
+                # lambdas2 is leading eigenvalues of pm2 matrix in solveBSE*.py
+                eigval = b.lambdas
+                Lambda = np.diag(1./(1-eigval))
+
+                # Dkk = zeros((nt,nt), dtype=real)
+                phit =zeros((nw,nc,nOrb,nOrb,nt), dtype=complex)
+                phit2=zeros((nw,nc,nOrb,nOrb,nt), dtype=complex)
+                Dkk =zeros((nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb), dtype=complex)
+                Dkk2=zeros((nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb), dtype=complex)
+                Pd =zeros((nOrb,nOrb,nOrb,nOrb), dtype=complex)
+                PdIa =zeros((nOrb,nOrb,nOrb,nOrb), dtype=complex)
+
+                chi0 = b.chi0
+                for ialpha in range(nt):
+                    phit[:,:,:,:,ialpha] = b.evecs[:,:,:,:,ialpha]
+
+                # leading eigenvector
+                phit2[:,:,:,:,0] = b.evecs[:,:,:,:,0]
+
+                #phi = phit.reshape(nt,nt)
+                #phi2 = phit2.reshape(nt,nt)
+
+                evecscom = b.evecs.reshape(nt,nt)
+                Dkktemp = dot(phit,dot(Lambda,linalg.inv(evecscom)))
+                Dkktemp2 = Dkktemp.reshape(nt,nt)
+                Dkk = dot(b.chi0M,Dkktemp2)
+                #Dkk = dot(phi,dot(Lambda,phi.T))
+                Dkk = Dkk.reshape(nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb)
+                #Dkk2 = dot(phi2,dot(Lambda,phi2.T))
+                Lambda2 = Lambda.copy()
+                for i in range(len(Lambda)):
+                    Lambda2[i,i] = 0.0
+                Lambda2[0,0] = Lambda[0,0]
+                Dkk2temp = dot(phit2,dot(Lambda2,linalg.inv(evecscom)))
+                Dkk2temp2 = Dkk2temp.reshape(nt,nt)
+                Dkk2 = dot(b.chiMasqrt,dot(Dkk2temp2,b.chiMasqrt))
+                Dkk2 = Dkk2.reshape(nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb)
+                DkkLLbar = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
+                Dkk2LLbar = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
+                changeG4LLbar(DkkLLbar,Dkk)
+                changeG4LLbar(Dkk2LLbar,Dkk2)
+                LkkLLbar = sum(sum(DkkLLbar,axis=0),axis=3)
+                Lkk2LLbar = sum(sum(Dkk2LLbar,axis=0),axis=3)
+                for l1 in range(nOrb):
+                    for l2 in range(nOrb):
+                        for l3 in range(nOrb):
+                            for l4 in range(nOrb):
+                                Pd[l1,l2,l3,l4] = dot(gkd,dot(LkkLLbar[:,l1,l2,:,l3,l4],gkd)) * b.temp/b.Nc
+                                PdIa[l1,l2,l3,l4] = dot(gkd,dot(Lkk2LLbar[:,l1,l2,:,l3,l4],gkd)) * b.temp/b.Nc
+
+                Pd0 =zeros((nOrb,nOrb,nOrb,nOrb), dtype=complex)
+                Pd0Ia =zeros((nOrb,nOrb,nOrb,nOrb), dtype=complex)
+                for i in range(len(Lambda)):
+                    Lambda[i,i] = 1.0
+                for ialpha in range(nt):
+                    phit[:,:,:,:,ialpha] = b.evecs[:,:,:,:,ialpha]
+                phit2[:,:,:,:,0] = b.evecs[:,:,:,:,0]
+                        #phi = phit.reshape(nt,nt)
+                        #phi2 = phit2.reshape(nt,nt)
+                evecscom = b.evecs.reshape(nt,nt)
+                Dkktemp = dot(phit,dot(Lambda,linalg.inv(evecscom)))
+                Dkktemp2 = Dkktemp.reshape(nt,nt)
+                Dkk = dot(b.chi0M,Dkktemp2)
+                #Dkk = dot(phi,dot(Lambda,phi.T))
+                Dkk = Dkk.reshape(nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb)
+                #Dkk2 = dot(phi2,dot(Lambda,phi2.T))
+                Dkk2temp = dot(phit2,linalg.inv(evecscom))
+                Dkk2temp2 = Dkk2temp.reshape(nt,nt)
+                Dkk2 = dot(b.chiMasqrt,dot(Dkk2temp2,b.chiMasqrt))
+                Dkk2 = Dkk2.reshape(nw,nc,nOrb,nOrb,nw,nc,nOrb,nOrb)
+                DkkLLbar = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
+                Dkk2LLbar = zeros((b.NwG4,b.Nc,b.nOrb,b.nOrb,b.NwG4,b.Nc,b.nOrb,b.nOrb),dtype='complex')
+                changeG4LLbar(DkkLLbar,Dkk)
+                changeG4LLbar(Dkk2LLbar,Dkk2)
+                LkkLLbar = sum(sum(DkkLLbar,axis=0),axis=3)
+                Lkk2LLbar = sum(sum(Dkk2LLbar,axis=0),axis=3)
+                for l1 in range(nOrb):
+                    for l2 in range(nOrb):
+                        for l3 in range(nOrb):
+                            for l4 in range(nOrb):
+                                Pd0[l1,l2,l3,l4] = dot(gkd,dot(LkkLLbar[:,l1,l2,:,l3,l4],gkd)) * b.temp/b.Nc
+                                Pd0Ia[l1,l2,l3,l4] = dot(gkd,dot(Lkk2LLbar[:,l1,l2,:,l3,l4],gkd)) * b.temp/b.Nc
+                print("Pd=",np.sum(Pd))
+                print("PdIa=",np.sum(PdIa))
+                print("Pd0=",np.sum(Pd0))
+                print("Pd0/(1-lambda)=",np.sum(Pd0)/(1-b.lambdas[0].real))
+                print("Pd0Ia=",np.sum(Pd0Ia))
+                print("Pd0Ia/(1-lambda)=",np.sum(Pd0Ia)/(1-b.lambdas[0].real))
 
