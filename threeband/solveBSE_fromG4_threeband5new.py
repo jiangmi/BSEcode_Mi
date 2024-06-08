@@ -7,7 +7,7 @@ import sys
 import os
 from matplotlib.pyplot import *
 import matplotlib as mpll
-#import symmetrize_Nc4x4
+import symmetrize_Nc4x4
 
 
 class BSE:
@@ -37,7 +37,7 @@ class BSE:
         if calcCluster == False: self.buildChi0Lattice(nkfine)
         self.buildKernelMatrix()
         self.calcKernelEigenValues()            
-        if self.draw: self.plotLeadingSolutions(self.Kvecs,self.lambdas,self.evecs[:,:,0,0,:],"Cu-Cu")
+        if self.draw: self.plotLeadingSolutions(self.Kvecs,self.lambdas[0:4],self.evecs[:,:,0,0,0:4],"Cu-Cu")
         #if calcRedVertex: self.calcReducibleLatticeVertex()
         #if self.vertex_channel in ("PARTICLE_PARTICLE_SUPERCONDUCTING","PARTICLE_PARTICLE_UP_DOWN"):
         #    if calcCluster == False: self.calcSCSus()
@@ -66,10 +66,14 @@ class BSE:
         print("U_dd = ",self.Udd)
         self.tpp = array(f['parameters']['threebands-Hubbard-model']['t_pp'])[0]
         print("t_pp = ",self.tpp)
-        self.tpd = array(f['parameters']['threebands-Hubbard-model']['t_pd'])[0]
-        print("t_pd = ",self.tpd)
-        self.epp = array(f['parameters']['threebands-Hubbard-model']['ep_p'])[0]
-        print("ep_p = ",self.epp)
+        self.tpdx = array(f['parameters']['threebands-Hubbard-model']['t_pdx'])[0]
+        print("t_pdx = ",self.tpdx)
+        self.tpdy = array(f['parameters']['threebands-Hubbard-model']['t_pdy'])[0]
+        print("t_pdy = ",self.tpdy)
+        self.eppx = array(f['parameters']['threebands-Hubbard-model']['ep_px'])[0]
+        print("ep_px = ",self.eppx)
+        self.eppy = array(f['parameters']['threebands-Hubbard-model']['ep_py'])[0]                                             
+        print("ep_py = ",self.eppy) 
         self.epd = array(f['parameters']['threebands-Hubbard-model']['ep_d'])[0]
         print("ep_d = ",self.epd)
         self.fill = array(f['parameters']['physics']['density'])[0]
@@ -802,6 +806,7 @@ class BSE:
         self.pm *= 1.0/(self.invT*float(self.Nc))
 
         
+        # pm2 is using Peizhi Mai's PRB (2021)'s new methods with sqrt(chi)
         wtemp,vtemp = linalg.eig(self.chiM)
         wttemp = abs(wtemp-1)
         ileadtemp = argsort(wttemp)
@@ -835,6 +840,8 @@ class BSE:
         #    self.Gamma[iw1,:,:,:,:,:,:,:]=(Gamma1[iw1,:,:,:,:,:,:,:]+Gamma1[NwG4-iw1-1,:,:,:,:,:,:,:])/2
 
     def calcKernelEigenValuesnew(self):
+        # pm2 is using Peizhi Mai's PRB (2021)'s new methods with sqrt(chi)
+        
         nt = self.nt; Nc = self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
         w,v = linalg.eig(self.pm2)
         wt = abs(w-1)
@@ -887,6 +894,7 @@ class BSE:
 
         
     def calcKernelEigenValues(self):
+        # pm2 is using Peizhi Mai's PRB (2021)'s new methods with sqrt(chi)
         nt = self.nt; Nc = self.Nc; NwG4=self.NwG4; nOrb = self.nOrb
         w,v = linalg.eig(self.pm2)
         wt = abs(w-1)
@@ -1146,12 +1154,12 @@ class BSE:
 
     def dispersion(self,kx,ky):
         ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
-        r1 = -2.* 1j *self.tpd*sin(kx/2.)
-        r2 = 2.* 1j *self.tpd*sin(ky/2.)
+        r1 = -2.* 1j *self.tpdx*sin(kx/2.)
+        r2 = 2.* 1j *self.tpdy*sin(ky/2.)
         r3 = 4.*self.tpp*sin(kx/2.)*sin(ky/2.)
         ek[0,0] = self.epd
-        ek[1,1] = self.epp
-        ek[2,2] = self.epp
+        ek[1,1] = self.eppx
+        ek[2,2] = self.eppy
         ek[0,1] = r1
         ek[1,0] = -r1
         ek[0,2] = r2
@@ -1180,7 +1188,7 @@ class BSE:
             if Kvecs[ic,0] > pi: Kvecs[ic,0] -=2.*pi
             if Kvecs[ic,1] > pi: Kvecs[ic,1] -=2.*pi
 
-        fig, axes = mpl.subplots(nrows=4,ncols=4, sharex=True,sharey=True,figsize=(16,16))
+        fig, axes = mpl.subplots(nrows=2,ncols=2, sharex=True,sharey=True,figsize=(16,16))
         inr=0
         for ax in axes.flat:
             self.plotEV(ax,Kvecs,lambdas,evecs,inr)
@@ -1189,7 +1197,7 @@ class BSE:
         if title==None:
             title = r"Leading eigensolutions of BSE for $Upp=$" + str(self.Upp) + r", $t\prime=$" + str(self.tp1) + r", $\langle n\rangle=$" + str(self.fill) + r", $T=$" + str(self.temp)
         fig.suptitle(title, fontsize=10)
-        mpl.show()
+        mpl.savefig("Eigvec.pdf")
 
     def plotEV(self,ax,Kvecs,lambdas,evecs,inr):
         prop_cycle = rcParams['axes.prop_cycle']
