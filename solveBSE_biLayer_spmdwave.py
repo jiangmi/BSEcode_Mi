@@ -1756,9 +1756,7 @@ class BSE:
 
 
 
-        #r1 = -2.*self.t1*(cx+cy) - 4.0*self.tp1*cxy - 2.0*self.tpp*c2
-
-        r1 = -2.*self.t1*(cx+cy) 
+        r1 = -2.*self.t1*(cx+cy) - 4.0*self.tp1*cxy - 2.0*self.tpp*c2
 
         r2 = - (self.tperp + 2.*self.tperpp*(cos(kx)+cos(ky)))* cos(kz)
 
