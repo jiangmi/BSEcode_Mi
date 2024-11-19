@@ -203,60 +203,31 @@ class BSE:
             print("Inverse temperature = ",self.invT)
 
             self.temp = 1.0/self.invT
-
+            
+            self.e1 = array(f['parameters']['bilayer-Hubbard-model']['e1'])[0]
+            print ("e1 = ",self.e1)
+            self.e2 = array(f['parameters']['bilayer-Hubbard-model']['e2'])[0]
+            print ("e2 = ",self.e2)
             self.U = array(f['parameters']['bilayer-Hubbard-model']['U1'])[0]
-
             print("U = ",self.U)
-
-            # self.tp1 = array(f['parameters']['bilayer-Hubbard-model']['t-prime1'])[0]
-
-            self.tp1 = array(f['parameters']['bilayer-Hubbard-model']['t1-prime'])[0]
-
-            print("t-prime = ",self.tp1)
-
-            #self.tpp = array(f['parameters']['bilayer-Hubbard-model']['t-pp'])[0]
-
-            #print("t-pp = ",self.tpp)
-
-            # self.t1 = np.array(f['parameters']['bilayer-Hubbard-model']['t1'])[0]
-
-            self.t1 = np.array(f['parameters']['bilayer-Hubbard-model']['t1'])[0]
-
-            # self.t2 = np.array(f['parameters']['bilayer-Hubbard-model']['t2'])[0]
-
-            print("t = ",self.t1)
-
-            # self.tp2 = array(f['parameters']['bilayer-Hubbard-model']['t-prime2'])[0]
-
-            # print("t-prime = ",self.tp2)
-
-            # if (self.tp1!=self.tp2):
-
-                # sys.exit("tp1 not equal to tp2; exiting")
-
-            # self.DeltaE = array(f['parameters']['bilayer-Hubbard-model']['Delta-E'])[0]
-
-            # print("Delta-E = ",self.DeltaE)
-
-            # if self.DeltaE!=0.0:
-
-                # sys.exit("Delta-E = finite; exiting")
-
+            self.t1 = array(f['parameters']['bilayer-Hubbard-model']['t1'])[0]
+            print ("t1 = ",self.t1)
+            self.t2 = array(f['parameters']['bilayer-Hubbard-model']['t2'])[0]
+            print ("t2 = ",self.t2)
+            self.t1p = array(f['parameters']['bilayer-Hubbard-model']['t1-prime'])[0]
+            print ("t1-prime = ",self.t1p)
+            self.t2p = array(f['parameters']['bilayer-Hubbard-model']['t2-prime'])[0]
+            print ("t2-prime = ",self.t2p)
             self.tperp = array(f['parameters']['bilayer-Hubbard-model']['t-perp'])[0]
-
-            print("tperp = ",self.tperp)
-
-            self.tperpp = array(f['parameters']['bilayer-Hubbard-model']['t-perp-prime'])[0]
-
-            print("tperp_p = ",self.tperpp)
-
-            #self.tperppp = array(f['parameters']['bilayer-Hubbard-model']['t-perp-pp'])[0]
-
-            #print("tperp_pp = ",self.tperppp)
-
-            # self.tperpp = array(f['parameters']['bilayer-Hubbard-model']['t-perp-p'])[0]
-
-            # print("tperpp = ",self.tperpp)
+            print ("tperp = ",self.tperp)
+            self.tperp_px = array(f['parameters']['bilayer-Hubbard-model']['t-perp-prime-x'])[0]
+            print ("tperp_px = ",self.tperp_px)
+            self.tperp_py = array(f['parameters']['bilayer-Hubbard-model']['t-perp-prime-y'])[0]
+            print ("tperp_py = ",self.tperp_py)
+            self.V = array(f['parameters']['bilayer-Hubbard-model']['V'])[0]
+            print ("V = ",self.V)
+            self.Vp = array(f['parameters']['bilayer-Hubbard-model']['V-prime'])[0]
+            print ("V-prime = ",self.Vp)
 
             self.fill = array(f['parameters']['physics']['density'])[0]
 
@@ -1752,19 +1723,19 @@ class BSE:
 
         # const auto ek_inter = val4 + val5;
 
-        cx = cos(kx); cy = cos(ky); cxy = cx*cy; c2 = cos(2*kx)+cos(2*ky)
+        cx = cos(kx); cy = cos(ky);   cxy = cx*cy; c2 = cos(2*kx)+cos(2*ky)
 
 
+        #r1 = -2.*self.t1*(cx+cy) - 4.0*self.tp1*cxy - 2.0*self.tpp*c2
 
-        r1 = -2.*self.t1*(cx+cy) - 4.0*self.tp1*cxy - 2.0*self.tpp*c2
-
-        r2 = - (self.tperp + 2.*self.tperpp*(cos(kx)+cos(ky)))* cos(kz)
-
+        #r2 = - (self.tperp + 2.*self.tperpp*(cos(kx)+cos(ky)))* cos(kz)
+        
         #r2 = cos(kz) * (-self.tperp-4.*self.tperpp*cxy-2.*self.tperppp*c2)
+        
 
-
-
-        return r1+r2
+        r2 = -2.*self.t1*(cx+cy) - 4.0*self.t1p*cxy + self.e1/2+ self.e2/2 - sqrt(4*self.tperp**2 + 16*self.tperp*self.tperp_px*cx + 16*self.tperp*self.tperp_py*cy + 16*self.tperp_px**2*cx**2 + 32*self.tperp_px*self.tperp_py*cx*cy + 16*self.tperp_py**2*cy**2 + self.e1**2 - 2*self.e1*self.e2 + self.e2**2)* cos(kz)/2
+        
+        return r2
 
 
 
