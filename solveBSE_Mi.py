@@ -305,6 +305,36 @@ class BSE:
             self.Vp = array(f['parameters']['bilayer-Hubbard-model']['V-prime'])[0]
             print ("V-prime = ",self.Vp)
             
+        if model=='Eg_bilayer': # effectively 4 layers because of its 3D lattice nature
+            self.e1 = array(f['parameters']['bilayer-eg-model']['e1'])[0]
+            print ("e1 = ",self.e1)
+            self.e2 = array(f['parameters']['bilayer-eg-model']['e2'])[0]
+            print ("e2 = ",self.e2)
+            self.U1 = array(f['parameters']['bilayer-eg-model']['U1'])[0]
+            print ("U1 = ",self.U1)
+            self.U2 = array(f['parameters']['bilayer-eg-model']['U2'])[0]
+            print ("U2 = ",self.U2)
+            self.t1 = array(f['parameters']['bilayer-eg-model']['t1'])[0]
+            print ("t1 = ",self.t1)
+            self.t2 = array(f['parameters']['bilayer-eg-model']['t2'])[0]
+            print ("t2 = ",self.t2)
+            self.t1p = array(f['parameters']['bilayer-eg-model']['t1-prime'])[0]
+            print ("t1-prime = ",self.t1p)
+            self.t2p = array(f['parameters']['bilayer-eg-model']['t2-prime'])[0]
+            print ("t2-prime = ",self.t2p)
+            self.thybx = array(f['parameters']['bilayer-eg-model']['t-hyb-x'])[0]
+            print ("thyb-x = ",self.thybx)
+            self.thyby = array(f['parameters']['bilayer-eg-model']['t-hyb-y'])[0]
+            print ("thyb-y = ",self.thyby)
+            self.tperp1 = array(f['parameters']['bilayer-eg-model']['t-perp1'])[0]
+            print ("tperp1 = ",self.tperp1)
+            self.tperp2 = array(f['parameters']['bilayer-eg-model']['t-perp2'])[0]
+            print ("tperp2 = ",self.tperp2)
+            self.V = array(f['parameters']['bilayer-eg-model']['V'])[0]
+            print ("V = ",self.V)
+            self.Vp = array(f['parameters']['bilayer-eg-model']['V-prime'])[0]
+            print ("V-prime = ",self.Vp)
+            
         if model=='dsmodel':
             self.e1 = array(f['parameters']['ds-model']['e1'])[0]
             print("e1 = ",self.e1)
@@ -1727,6 +1757,17 @@ class BSE:
             r12  = -self.tperp -2. * self.tperp_p * (cos(kx) + cos(ky))
             ek[0,0] = r11; ek[1,1] = r22
             ek[0,1] = r12; ek[1,0] = r12
+            
+        elif self.model=='Eg_bilayer':            
+            ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
+            r11  = self.e1 +2.*self.t1*(cos(kx)+cos(ky)) + 4.0*self.t1p*cos(kx)*cos(ky)
+            r22  = self.e2 +2.*self.t2*(cos(kx)+cos(ky)) + 4.0*self.t2p*cos(kx)*cos(ky)
+            r12  = 2. * (self.thybx * std::cos(kx) + self.thyby * std::cos(ky))
+            
+            ek[0,0] = r11; ek[1,1] = r22; ek[2,2] = r11; ek[3,3] = r22
+            ek[0,1] = r12; ek[1,0] = r12; ek[2,3] = r12; ek[3,2] = r12
+            ek[0,2] = self.tperp1; ek[2,0] = self.tperp1
+            ek[1,3] = self.tperp2; ek[3,1] = self.tperp2
 
         elif self.model=='dsmodel':
             ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
@@ -1905,8 +1946,8 @@ for T_ind, T in enumerate(Ts):
             if(os.path.exists(file_tp)):
                 print ("\n =================================\n")
                 print ("T =", T)
-                # model='square','square_txty','bilayer','dsmodel','trilayer','Emery','ddpmodel','sdsmodel'
-                BSE('square_txty_nn',\
+                # model='square','square_txty','bilayer','dsmodel','trilayer','Emery','ddpmodel','sdsmodel','sdsmodel','Eg-bilayer'
+                BSE('Eg_bilayer',\
                     Ts[T_ind],\
                     file_tp,\
                     file_sp,\
