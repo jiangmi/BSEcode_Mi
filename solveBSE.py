@@ -25,7 +25,7 @@ from matplotlib.pyplot import *
 import matplotlib as mpll
 
 class BSE:
-    def __init__(self,model,Tval,fileG4,fileG,file_analysis_hdf5,draw,useG0,symmetrizeG4,phSymmetry,calcCluster,build_sym_kernel,useGamma_hdf5,nkfine,compare_with_analysishdf5,write_data_file):
+    def __init__(self,model,Tval,fileG4,fileG,file_analysis_hdf5,draw,useG0,symmetry_layer,symmetrizeG4,phSymmetry,calcCluster,build_sym_kernel,useGamma_hdf5,nkfine,compare_with_analysishdf5,write_data_file):
         self.vertex_channels = ["PARTICLE_PARTICLE_UP_DOWN",          \
                                 "PARTICLE_HOLE_CHARGE",               \
                                 "PARTICLE_HOLE_MAGNETIC",             \
@@ -33,6 +33,7 @@ class BSE:
                                 "PARTICLE_HOLE_LONGITUDINAL_UP_DOWN", \
                                 "PARTICLE_HOLE_TRANSVERSE"]
         self.model = model
+        self.symmetry_layer = symmetry_layer
         self.Tval = Tval
         self.fileG4 = fileG4
         self.fileG = fileG
@@ -116,19 +117,34 @@ class BSE:
         self.orbital=array(f['DCA-loop-functions']['orbital-occupancies']['data'])
         print ("orbital.shape:",self.orbital.shape,'\n')
         # ('orbital.shape:', (1, 2, 3))
-        
-        if self.model=='square':
+
+        ### generally extract the filling in orbitals
+        #norbs = self.orbital.shape[2]
+        #for ii in range(self.orbital.shape[0]):
+        #    print('\n iteration ', ii)
+
+        #    for iorb in range(norbs):
+        #        print("orbital ", iorb, " filling = ", self.orbital[ii, 0, iorb] \
+        #              + self.orbital[ii, 1, iorb], '\n')
+
+        if self.model=='square' or self.model=='square_txty':
             print ("orbital occupancy:",self.orbital[0],'\n')
             print ("filling =", self.orbital[0,0,0]+self.orbital[0,1,0],'\n')
-        elif self.model=='bilayer':
+        elif self.model=='bilayer' or self.model=='dsmodel':
             print ("orbital occupancy:",self.orbital[self.orbital.shape[0]-1],'\n')
             print ("Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n')
             print ("Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n')
-        elif self.model=='trilayer':
+        elif self.model=='trilayer' or self.model=='sdsmodel' or self.model=='ddpmodel' or self.model == 'Emery':
             print("orbital occupancy:",self.orbital[self.orbital.shape[0]-1],'\n')
             print("Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n')
             print("Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n')
             print("Layer3 filling =", self.orbital[self.orbital.shape[0]-1,0,2]+self.orbital[self.orbital.shape[0]-1,1,2],'\n')
+        elif self.model=='Eg_bilayer':
+            print("orbital occupancy:",self.orbital[self.orbital.shape[0]-1],'\n')
+            print("Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n')
+            print("Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n')
+            print("Layer3 filling =", self.orbital[self.orbital.shape[0]-1,0,2]+self.orbital[self.orbital.shape[0]-1,1,2],'\n')
+            print("Layer4 filling =", self.orbital[self.orbital.shape[0]-1,0,3]+self.orbital[self.orbital.shape[0]-1,1,3], '\n')
         
         self.sigmaarray=array(f['DCA-loop-functions']['L2_Sigma_difference']['data'])
         print ("L2_Sigma_difference =", self.sigmaarray,'\n')
@@ -447,20 +463,6 @@ class BSE:
             print("coefp = ", self.coefp)
             self.coefm = array(f['parameters']['trilayer-Hubbard-model']['coefm'])[0]
             print("coefm = ", self.coefm)
-
-        if model=='Emery':
-            self.Udd = array(f['parameters']['threebands-Hubbard-model']['U_dd'])[0]
-            print ("Udd = ",self.Udd)
-            self.Upp = array(f['parameters']['threebands-Hubbard-model']['U_pp'])[0]
-            print ("Upp = ",self.Upp)
-            self.tpd = np.array(f['parameters']['threebands-Hubbard-model']['t_pd'])[0]
-            print ("tpd = ",self.tpd)
-            self.tpp = np.array(f['parameters']['threebands-Hubbard-model']['t_pp'])[0]
-            print ("tpp = ",self.tpp)
-            self.ep_d = np.array(f['parameters']['threebands-Hubbard-model']['ep_d'])[0]
-            print ("ep_d = ",self.ep_d)
-            self.ep_p = np.array(f['parameters']['threebands-Hubbard-model']['ep_p'])[0]
-            print ("ep_p = ",self.ep_p)
             
     def K_2_iK(self,Kx,Ky):
         delta=1.0e-4
@@ -509,11 +511,11 @@ class BSE:
                                                 G4susQz0 += c1  
 
         G4rtemp = self.G4r.copy()
-        if self.model == 'bilayer' or self.model == 'trilayer':
-            self.apply_symmetry_in_layer(self.G4r);print('symmetry G4r')
-            self.G4M = self.G4rt.reshape(self.nt,self.nt)
-        else:
-            self.G4M = self.G4r.reshape(self.nt, self.nt)
+        self.G4M = self.G4r.reshape(self.nt, self.nt)
+        if self.symmetry_layer:
+            if self.model == 'bilayer' or self.model == 'trilayer':
+                self.apply_symmetry_in_layer(self.G4r);print('symmetry G4r')
+                self.G4M = self.G4rt.reshape(self.nt,self.nt)
 
         if self.vertex_channel=="PARTICLE_HOLE_MAGNETIC":
             print ("Cluster Chi_total(q,qz=0) :", G4susQz0/(self.invT*self.Nc*2.0))
@@ -803,12 +805,12 @@ class BSE:
                                     if l1==l2==l3==l4==2:
                                         G4sus2Qz0 += self.chic0[iw,ik,2,2,iw,ik,2,2]
                                         G4susQzPi += c1*exp(1j*np.pi*(l2-l3))
-
-        if self.model == 'bilayer' or self.model == 'trilayer':
-            self.apply_symmetry_in_chic_layer(self.chic0);print('symmetry chic0')
-            self.chic0M = self.chic0t.reshape(self.nt,self.nt) ##apply layer symmetry
-        else:
-            self.chic0M = self.chic0.reshape(self.nt, self.nt)
+        
+        self.chic0M = self.chic0.reshape(self.nt, self.nt)
+        if self.symmetry_layer:
+            if self.model == 'bilayer' or self.model == 'trilayer':
+                self.apply_symmetry_in_chic_layer(self.chic0);print('symmetry chic0')
+                self.chic0M = self.chic0t.reshape(self.nt,self.nt) ##apply layer symmetry
         #print('chic0:',self.chic0[:,1,0,0,24,1,0,0])
         #print('chic0:',self.chic0[:,1,2,2,24,1,2,2])
         
@@ -1071,11 +1073,11 @@ class BSE:
                 self.chi0XS[iwn,iK,:,:,iwn,iK,:,:]  = c4[:,:,:,:]/kPatch.shape[0]
                 self.chi0XS2[iwn,iK,:,:,iwn,iK,:,:]  = c5[:,:,:,:]/kPatch.shape[0]
 
-        if self.model == 'bilayer' or self.model == 'trilayer':
-            self.apply_symmetry_in_chi_layer(self.chi0);print('symmetry chi0')
-            self.chi0M = self.chi0t.reshape(self.nt, self.nt)  ##apply layer symmetry
-        else:
-            self.chic0M = self.chi0.reshape(self.nt, self.nt)
+        self.chi0M = self.chi0.reshape(self.nt, self.nt)
+        if self.symmetry_layer:
+            if self.model == 'bilayer' or self.model == 'trilayer':
+                self.apply_symmetry_in_chi_layer(self.chi0);print('symmetry chi0')
+                self.chi0M = self.chi0t.reshape(self.nt, self.nt)  ##apply layer symmetry
                 #self.cG[iwn,iK,:,:] = cG[:,:]/kPatch.shape[0]
                 #self.cG0[iwn,iK,:,:] = cG0[:,:]/kPatch.shape[0]
 
@@ -1699,7 +1701,7 @@ class BSE:
             ek = np.zeros((self.nOrb, self.nOrb), dtype='complex')
             r11 = self.e1 + 2. * self.t1 * (cos(kx) + cos(ky)) + 4.0 * self.t1p * cos(kx) * cos(ky)
             r22 = self.e2 + 2. * self.t2 * (cos(kx) + cos(ky)) + 4.0 * self.t2p * cos(kx) * cos(ky)
-            r12 = 2. * (self.thybx * std::cos(kx) + self.thyby * std::cos(ky))
+            r12 = 2. * (self.thybx * cos(kx) + self.thyby * cos(ky))
 
             ek[0, 0] = r11
             ek[1, 1] = r22
@@ -1850,7 +1852,7 @@ for T_ind, T in enumerate(Ts):
             if(os.path.exists(file_tp)):
                 print ("\n =================================\n")
                 print ("T =", T)
-                # model='square','square_txty','bilayer','dsmodel','trilayer','Emery','ddpmodel','sdsmodel','sdsmodel','Eg-bilayer'
+                # model='square','square_txty','bilayer','dsmodel','trilayer','Emery','ddpmodel','sdsmodel','Eg-bilayer'
                 BSE('trilayer',\
                     Ts[T_ind],\
                     file_tp,\
@@ -1865,5 +1867,6 @@ for T_ind, T in enumerate(Ts):
                     useGamma_hdf5=False,\
                     nkfine=100,\
                     compare_with_analysishdf5=False,\
+                    symmetry_layer=False,\
                     write_data_file=True)
               
