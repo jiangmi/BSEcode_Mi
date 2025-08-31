@@ -139,7 +139,7 @@ class BSE:
             print("Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n')
             print("Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n')
             print("Layer3 filling =", self.orbital[self.orbital.shape[0]-1,0,2]+self.orbital[self.orbital.shape[0]-1,1,2],'\n')
-        elif self.model=='Eg_bilayer':
+        elif self.model=='Eg_bilayer' or self.model=='La3Ni2O7':
             print("orbital occupancy:",self.orbital[self.orbital.shape[0]-1],'\n')
             print("Layer1 filling =", self.orbital[self.orbital.shape[0]-1,0,0]+self.orbital[self.orbital.shape[0]-1,1,0],'\n')
             print("Layer2 filling =", self.orbital[self.orbital.shape[0]-1,0,1]+self.orbital[self.orbital.shape[0]-1,1,1],'\n')
@@ -317,6 +317,62 @@ class BSE:
             print("V = ", self.V)
             self.Vp = array(f['parameters']['bilayer-eg-model']['V-prime'])[0]
             print("V-prime = ", self.Vp)
+
+        if model == 'La3Ni2O7':
+            self.ex = array(f['parameters']['La3Ni2O7-model']['ex'])[0]
+            print("ex = ", self.ex)
+            self.ez = array(f['parameters']['La3Ni2O7-model']['ez'])[0]
+            print("ez = ", self.ez)
+
+            #### these on-site Coulomb interactions are not clear!!! need checking
+            #self.Udx = array(f['parameters']['La3Ni2O7-model']['Udx'])[0]
+            #print("Udx = ", self.Udx)
+            #self.Udz = array(f['parameters']['La3Ni2O7-model']['Udz'])[0]
+            #print("Udz = ", self.Udz)
+            #self.Up = array(f['parameters']['La3Ni2O7-model']['Up'])[0]
+            #print("Up = ", self.Up)
+
+            self.t11x = array(f['parameters']['La3Ni2O7-model']['t11x'])[0]
+            print("t11x = ", self.t11x)
+            self.t11xy = array(f['parameters']['La3Ni2O7-model']['t11xy'])[0]
+            print("t11xy = ", self.t11xy)
+            self.t11xx = array(f['parameters']['La3Ni2O7-model']['t11xx'])[0]
+            print("t11xx = ", self.t11xx)
+
+            self.t22x = array(f['parameters']['La3Ni2O7-model']['t22x'])[0]
+            print("t22x = ", self.t22x)
+            self.t22xy = array(f['parameters']['La3Ni2O7-model']['t22xy'])[0]
+            print("t22xy = ", self.t22xy)
+            self.t22xx = array(f['parameters']['La3Ni2O7-model']['t22xx'])[0]
+            print("t22xx = ", self.t22xx)
+
+            self.t12x = array(f['parameters']['La3Ni2O7-model']['t12x'])[0]
+            print("t12x = ", self.t12x)
+            self.t12xx = array(f['parameters']['La3Ni2O7-model']['t12xx'])[0]
+            print("t12xx = ", self.t12xx)
+
+            self.s110 = array(f['parameters']['La3Ni2O7-model']['s110'])[0]
+            print("s110 = ", self.s110)
+            self.s11x = array(f['parameters']['La3Ni2O7-model']['s11x'])[0]
+            print("s11x = ", self.s11x)
+            self.s11xy = array(f['parameters']['La3Ni2O7-model']['s11xy'])[0]
+            print("s11xy = ", self.s11xy)
+            self.s11xx = array(f['parameters']['La3Ni2O7-model']['s11xx'])[0]
+            print("s11xx = ", self.s11xx)
+
+            self.s220 = array(f['parameters']['La3Ni2O7-model']['s220'])[0]
+            print("s220 = ", self.s220)
+            self.s22x = array(f['parameters']['La3Ni2O7-model']['s22x'])[0]
+            print("s22x = ", self.s22x)
+            self.s22xy = array(f['parameters']['La3Ni2O7-model']['s22xy'])[0]
+            print("s22xy = ", self.s22xy)
+            self.s22xx = array(f['parameters']['La3Ni2O7-model']['s22xx'])[0]
+            print("s22xx = ", self.s22xx)
+
+            self.s12x = array(f['parameters']['La3Ni2O7-model']['s12x'])[0]
+            print("s12x = ", self.s12x)
+            self.s12xx = array(f['parameters']['La3Ni2O7-model']['s12xx'])[0]
+            print("s12xx = ", self.s12xx)
 
         if model == 'dsmodel':
             self.e1 = array(f['parameters']['ds-model']['e1'])[0]
@@ -1750,7 +1806,22 @@ class BSE:
             ek[1,2] = r3
             ek[2,1] = r3
 
-        elif self.model=='bilayer':            
+        elif self.model=='La3Ni2O7': ## keep the sign(+) being consistent with the Compress_thinflim_Simplified_Model.txt, rather than sign(-)
+            ek  = np.zeros((self.nOrb,self.nOrb),dtype='complex')
+            Hx  = self.ex + 2.*self.t11x*(cos(kx)+cos(ky)) + 4.*self.t11xy*cos(kx)*cos(ky) + 2.*self.t11xx*(cos(2*kx)+cos(2*ky))
+            Hz  = self.ez + 2.*self.t22x*(cos(kx)+cos(ky)) + 4.*self.t22xy*cos(kx)*cos(ky) + 2.*self.t22xx*(cos(2*kx)+cos(2*ky))
+            V   = 2.*self.t12x*(cos(kx)-cos(ky)) + 2.*self.t12xx*(cos(2*kx)-cos(2*ky))
+
+            Hxp = self.s110 + 2.*self.s11x*(cos(kx)+cos(ky)) + 4. * self.s11xy*cos(kx)*cos(ky) + 2.*self.s11xx*(cos(2*kx)+cos(2*ky))
+            Hzp = self.s220 + 2.*self.s22x*(cos(kx)+cos(ky)) + 4. * self.s22xy*cos(kx)*cos(ky) + 2.*self.s22xx*(cos(2*kx)+cos(2*ky))
+            Vp  = 2.*self.s12x*(cos(kx)-cos(ky)) + 2.*self.s12xx*(cos(2.*kx)-cos(2.*ky))
+
+            ek[0,0] = Hx ; ek[0,1] = V  ; ek[0,2] = Hxp; ek[0,3] = Vp      ## HA = [Hx, V      HAB = [Hxp, Vp
+            ek[1,0] = V  ; ek[1,1] = Hz ; ek[1,2] = Vp ; ek[1,3] = Hzp     ##       V, Hz]            Vp, Hzp]
+            ek[2,0] = Hxp; ek[2,1] = Vp ; ek[2,2] = Hx ; ek[2,3] = V       ##  H = [HA, HAB
+            ek[3,0] = Vp ; ek[3,1] = Hzp; ek[3,2] = V  ; ek[3,3] = Hz      ##       HAB, HA]
+
+        elif self.model=='bilayer':
             ek = np.zeros((self.nOrb,self.nOrb),dtype='complex')
             r11  = self.e1 -2.*self.t1*(cos(kx)+cos(ky)) - 4.0*self.t1p*cos(kx)*cos(ky)
             r22  = self.e2 -2.*self.t2*(cos(kx)+cos(ky)) - 4.0*self.t2p*cos(kx)*cos(ky)
@@ -1830,7 +1901,7 @@ class BSE:
                            
 ###################################################################################
 Ts = [1, 0.75, 0.5, 0.44, 0.4, 0.34, 0.3, 0.25, 0.24, 0.225, 0.2, 0.175, 0.17, 0.15, 0.125, 0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.035, 0.03, 0.025]
-Ts = [0.06]#, 0.02]
+#Ts = [0.06]#, 0.02]
 #channels = ['phcharge','phmag']
 #channels = ['phmag']
 qs = ['00']#,'pi20','pi0','pipi2','pipi','pi2pi2']
@@ -1852,8 +1923,9 @@ for T_ind, T in enumerate(Ts):
             if(os.path.exists(file_tp)):
                 print ("\n =================================\n")
                 print ("T =", T)
-                # model='square','square_txty','bilayer','dsmodel','trilayer','Emery','ddpmodel','sdsmodel','Eg-bilayer'
-                BSE('trilayer',\
+               # model = 'square','square_txty','bilayer','dsmodel','trilayer','Emery'
+               #         'ddpmodel','sdsmodel','Eg-bilayer', 'La3Ni2O7'
+                BSE('La3Ni2O7',\
                     Ts[T_ind],\
                     file_tp,\
                     file_sp,\
